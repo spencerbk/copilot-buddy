@@ -1,8 +1,13 @@
 """Monitor for GitHub Copilot CLI activity.
 
-Scans the process table for 'gh' processes with 'copilot' in the
-argument list.  Detection is best-effort — short-lived processes may
-be missed between poll intervals.
+Scans the process table for Copilot CLI processes.  Supports both the
+traditional ``gh copilot suggest/explain`` invocation and the standalone
+``copilot`` CLI (e.g. ``copilot --yolo --experimental``).
+
+Detection is best-effort — short-lived processes may be missed between
+poll intervals.  The standalone CLI runs as a long-lived interactive
+session, so the watcher provides **session-level** detection (busy while
+running, idle when closed) rather than per-query granularity.
 """
 
 from __future__ import annotations
@@ -23,11 +28,12 @@ _FLAGS_WITH_VALUE = frozenset({"-t", "--target"})
 
 
 def extract_query(cmdline: list[str]) -> str:
-    """Pull the user's query text from a ``gh copilot`` command line.
+    """Pull the user's query text from a Copilot CLI command line.
 
     Looks for the first non-flag argument after ``suggest`` or ``explain``,
     skipping flags and their values (e.g. ``-t shell``).
-    Returns an empty string when no query is found.
+    Returns an empty string when no query is found (including for the
+    standalone ``copilot`` CLI which does not use subcommands).
     """
     for i, arg in enumerate(cmdline):
         low = arg.lower()
@@ -49,7 +55,11 @@ def extract_query(cmdline: list[str]) -> str:
 
 
 def scan_processes() -> list[dict]:
-    """Return currently-running ``gh copilot`` processes.
+    """Return currently-running Copilot CLI processes.
+
+    Matches two invocation styles:
+    - ``gh copilot suggest/explain`` — executable name is ``gh``
+    - ``copilot [flags]`` — executable name is ``copilot``
 
     Each entry is ``{"pid": int, "mode": str, "query": str}``.
     Handles Windows quirks: *cmdline* can be ``None`` and system
@@ -62,13 +72,16 @@ def scan_processes() -> list[dict]:
             if not cmdline:
                 continue
 
-            # Fast pre-check: the executable name should contain 'gh'.
             name: str = (proc.info.get("name") or "").lower()  # type: ignore[attr-defined]
+            basename = name.removesuffix(".exe")
             joined = " ".join(cmdline).lower()
 
-            if "gh" not in name and "gh" not in joined:
-                continue
-            if "copilot" not in joined:
+            # Traditional: `gh copilot suggest/explain`
+            is_gh_copilot = basename == "gh" and "copilot" in joined
+            # Standalone: `copilot --yolo --experimental`
+            is_standalone_copilot = basename == "copilot"
+
+            if not is_gh_copilot and not is_standalone_copilot:
                 continue
 
             mode = "explain" if "explain" in joined else "suggest"

@@ -10,7 +10,7 @@ Inspired by [claude-desktop-buddy](https://github.com/anthropics/claude-desktop-
 
 ## What Is This?
 
-A small animated character lives on your desk, displayed on a TFT or OLED screen connected to an ESP32-S2 or ESP32-S3. When you use `gh copilot suggest` or `gh copilot explain`, the pet reacts — working hard while your query runs, celebrating milestones, and sleeping when idle.
+A small animated character lives on your desk, displayed on a TFT or OLED screen connected to an ESP32-S2 or ESP32-S3. When you use the Copilot CLI — whether `gh copilot suggest`, `gh copilot explain`, or the standalone `copilot` command — the pet reacts, working hard while your query runs, celebrating milestones, and sleeping when idle.
 
 ### Pet States
 
@@ -18,7 +18,7 @@ A small animated character lives on your desk, displayed on a TFT or OLED screen
 |-------------|--------------------------------------|-----------------------|
 | 💤 Sleep    | No activity for 5+ minutes          | Eyes closed, breathing |
 | 😊 Idle     | Bridge connected, no active query    | Blinking, looking around |
-| 💻 Busy     | `gh copilot` query running           | Sweating, typing      |
+| 💻 Busy     | Copilot CLI query running            | Sweating, typing      |
 | ❗ Attention | Response ready                       | Alert, bouncing       |
 | 🎉 Celebrate| Milestone (every 50 queries)         | Dancing, confetti     |
 | 😵 Dizzy    | Error detected                       | Spiral eyes, wobbling |
@@ -63,7 +63,7 @@ Three firmware options are provided — pick one:
 | **Arduino (C++)** | `firmware/arduino/` | Performance, C++ developers |
 
 **CircuitPython setup:**
-1. Install [CircuitPython 9.x](https://circuitpython.org/downloads) on your ESP32-S2 or ESP32-S3
+1. Install [CircuitPython 10.x](https://circuitpython.org/downloads) on your ESP32-S2 or ESP32-S3
 2. Install libraries: `adafruit_st7789` (or your display driver), `adafruit_display_text`
 3. Edit `config.py` — uncomment your board
 4. Copy all files from `firmware/circuitpython/` to the `CIRCUITPY` drive
@@ -84,7 +84,11 @@ The bridge auto-detects the ESP32 serial port. Use `--port COM3` (Windows) or `-
 ### 3. Use Copilot and watch your pet react!
 
 ```bash
+# Traditional gh extension
 gh copilot suggest "how to reverse a linked list"
+
+# Standalone CLI
+copilot --yolo --experimental
 ```
 
 Your desk pet will transition: idle → busy → attention → idle.
@@ -98,7 +102,7 @@ Your desk pet will transition: idle → busy → attention → idle.
 │   Your Computer  │  ──────────────────▶   │  ESP32-S2/S3     │
 │                  │    JSON messages        │                  │
 │  ┌────────────┐  │    (newline-delim)      │  ┌────────────┐  │
-│  │ gh copilot │  │                        │  │  Display    │  │
+│  │Copilot CLI │  │                        │  │  Display    │  │
 │  └─────┬──────┘  │                        │  │  + Pet      │  │
 │  ┌─────▼──────┐  │                        │  └────────────┘  │
 │  │  Bridge    │  │                        │                  │
@@ -107,7 +111,7 @@ Your desk pet will transition: idle → busy → attention → idle.
 └──────────────────┘                        └──────────────────┘
 ```
 
-The bridge uses `psutil` to scan for `gh copilot` processes and sends JSON heartbeats/events over USB serial. See [protocol/schema.md](protocol/schema.md) for the wire protocol.
+The bridge uses `psutil` to scan for Copilot CLI processes (`gh copilot` or standalone `copilot`) and sends JSON heartbeats/events over USB serial. See [protocol/schema.md](protocol/schema.md) for the wire protocol.
 
 ---
 

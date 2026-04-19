@@ -3,7 +3,7 @@
 ## Overview
 
 An ESP32-S2/S3-based desk pet that connects to your computer and reacts to
-GitHub Copilot CLI (`gh copilot`) activity in real time. Displays an
+GitHub Copilot CLI activity in real time. Displays an
 animated character on an attached TFT/OLED screen that sleeps when idle,
 works when a query is in-flight, celebrates on completion, and more.
 
@@ -48,7 +48,7 @@ TFT BL         → GPIO 7
 
 ## Communication Architecture
 
-Since `gh copilot` has no built-in hardware bridge, we provide a small
+Since the Copilot CLI has no built-in hardware bridge, we provide a small
 **host-side bridge script** that monitors Copilot CLI activity and sends
 JSON events to the ESP32 over **USB serial** or **BLE**.
 
@@ -57,7 +57,7 @@ JSON events to the ESP32 over **USB serial** or **BLE**.
 │   Your Computer  │  ───────────────────▶  │  ESP32-S2/S3     │
 │                  │    JSON messages        │                  │
 │  ┌────────────┐  │    (newline-delim)      │  ┌────────────┐  │
-│  │ gh copilot │  │                        │  │  Display    │  │
+│  │Copilot CLI │  │                        │  │  Display    │  │
 │  └─────┬──────┘  │                        │  │  + Pet      │  │
 │        │         │                        │  └────────────┘  │
 │  ┌─────▼──────┐  │                        │                  │
@@ -199,7 +199,7 @@ firmware/
 | ----------- | ------------------------------------ | ---------------------------- |
 | `sleep`     | No activity for > 5 min             | Eyes closed, slow breathing  |
 | `idle`      | Bridge connected, no active query    | Blinking, looking around     |
-| `busy`      | `gh copilot` process running         | Sweating, working hard       |
+| `busy`      | Copilot CLI process running          | Sweating, working hard       |
 | `attention` | Response ready                       | Alert, bouncing              |
 | `celebrate` | Milestone (every 50 queries)         | Confetti, dancing            |
 | `dizzy`     | Error detected                       | Spiral eyes, wobbling        |
@@ -285,31 +285,41 @@ bridge/
 
 ```python
 """
-Monitor for gh copilot CLI activity.
+Monitor for Copilot CLI activity (both `gh copilot` and standalone `copilot`).
 
 Detection methods (in priority order):
-1. Process table scanning via psutil — look for 'gh' processes with
-   'copilot' in the argument list
+1. Process table scanning via psutil — look for Copilot CLI processes
+   (both 'gh copilot' and standalone 'copilot' executables)
 2. Shell history tailing — watch ~/.zsh_history, ~/.bash_history,
-   or ~/.local/share/fish/fish_history for new gh copilot entries
+   or ~/.local/share/fish/fish_history for new Copilot CLI entries
 """
 
 import psutil
 import time
 
 def scan_processes():
-    """Return list of active gh copilot processes with their args."""
+    """Return list of active Copilot CLI processes with their args."""
     results = []
     for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
         try:
             cmdline = proc.info['cmdline'] or []
+            name = (proc.info.get('name') or '').lower()
+            basename = name.removesuffix('.exe')
             joined = ' '.join(cmdline).lower()
-            if 'gh' in joined and 'copilot' in joined:
-                mode = 'suggest' if 'suggest' in joined else 'explain'
-                query = extract_query(cmdline)
-                results.append({'pid': proc.info['pid'],
-                                'mode': mode,
-                                'query': query})
+
+            # Traditional: `gh copilot suggest/explain`
+            is_gh_copilot = basename == 'gh' and 'copilot' in joined
+            # Standalone: `copilot --yolo --experimental`
+            is_standalone = basename == 'copilot'
+
+            if not is_gh_copilot and not is_standalone:
+                continue
+
+            mode = 'explain' if 'explain' in joined else 'suggest'
+            query = extract_query(cmdline)
+            results.append({'pid': proc.info['pid'],
+                            'mode': mode,
+                            'query': query})
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             pass
     return results
@@ -463,7 +473,7 @@ copilot-buddy/
 4. Implement `watcher.py` with process scanning
 5. Implement `transport_serial.py`
 6. Implement `copilot_bridge.py` — send heartbeats over serial
-7. Test: run `gh copilot suggest` and confirm bridge detects it
+7. Test: run `gh copilot suggest` or `copilot` and confirm bridge detects it
 
 ### Phase 3 — Firmware State Machine
 8. Implement `serial_bridge.py` on device — read JSON from USB
@@ -493,7 +503,7 @@ copilot-buddy/
 ## Acceptance Criteria
 
 - [ ] ESP32 displays an animated ASCII pet on attached screen
-- [ ] Pet state changes in real time when `gh copilot suggest/explain` runs
+- [ ] Pet state changes in real time when Copilot CLI runs (`gh copilot suggest/explain` or standalone `copilot`)
 - [ ] At least 6 selectable pets with 7 animation states each
 - [ ] Host bridge script auto-detects serial port and sends heartbeats
 - [ ] Stats (queries today, total) persist across reboots

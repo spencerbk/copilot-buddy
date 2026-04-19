@@ -1,6 +1,6 @@
 # copilot-buddy Bridge
 
-The bridge monitors your computer for GitHub Copilot CLI activity (`gh copilot suggest` / `gh copilot explain`) and streams real-time events to the ESP32 desk-pet over USB serial. It scans the process table with psutil, detects when Copilot queries start and end, tracks daily usage stats, and sends heartbeats so the pet always knows you're there.
+The bridge monitors your computer for GitHub Copilot CLI activity (`gh copilot suggest` / `gh copilot explain` or the standalone `copilot` CLI) and streams real-time events to the ESP32 desk-pet over USB serial. It scans the process table with psutil, detects when Copilot queries start and end, tracks daily usage stats, and sends heartbeats so the pet always knows you're there.
 
 ## Requirements
 
@@ -45,7 +45,7 @@ python -m bridge.copilot_bridge --transport loopback
 
 ## How it works
 
-1. **Process scanning** — Every `--poll-interval` seconds the bridge calls `psutil.process_iter()` and looks for processes whose command line contains `gh` and `copilot`.
+1. **Process scanning** — Every `--poll-interval` seconds the bridge calls `psutil.process_iter()` and looks for Copilot CLI processes by executable name (`gh` with `copilot` in the arguments, or the standalone `copilot` executable).
 2. **Event detection** — When a new Copilot process appears a `start` event is emitted; when it disappears an `end` event is emitted and the daily query counter increments.
 3. **Heartbeat** — Every 2 seconds the bridge sends a heartbeat message containing the current state (`idle` / `busy`), `queries_today`, and `total_queries`.
 4. **Serial transport** — Messages are newline-delimited JSON sent over USB serial at 115200 baud. The bridge can auto-detect the correct COM port by sending a `{"cmd":"status"}` handshake and waiting for an `{"ack":"status"}` reply.
