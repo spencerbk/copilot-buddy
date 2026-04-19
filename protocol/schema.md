@@ -53,7 +53,7 @@ alive and can update its display without polling.
 - `error` — the last query failed
 
 The device uses `state` to choose animations. If no heartbeat arrives
-within **6 seconds** the device enters a "disconnected" animation.
+within **10 seconds** the device enters a "disconnected" animation.
 
 ### Events (one-shot)
 
@@ -97,13 +97,13 @@ animation and then return to the heartbeat-driven state.
 #### `milestone` — query count milestone
 
 ```json
-{"evt":"milestone","n":100}
+{"evt":"milestone","n":50}
 ```
 
 | Field | Type   | Required | Description                            |
 |-------|--------|----------|----------------------------------------|
 | `evt` | string | yes      | Always `"milestone"`                   |
-| `n`   | int    | yes      | The milestone number (100, 500, 1000…) |
+| `n`   | int    | yes      | The milestone number (every 50: 50, 100, 150…) |
 
 ### Commands
 
