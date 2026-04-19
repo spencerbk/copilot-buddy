@@ -1,0 +1,7 @@
+{"state":"idle","query":"","mode":"suggest","queries_today":7,"total_queries":350,"ts":1775731200}
+{"evt":"start","query":"how to reverse a linked list in Python","mode":"suggest"}
+{"state":"busy","query":"how to reverse a linked list in Python","mode":"suggest","queries_today":8,"total_queries":351,"ts":1775731202}
+{"state":"busy","query":"how to reverse a linked list in Python","mode":"suggest","queries_today":8,"total_queries":351,"ts":1775731204}
+{"state":"busy","query":"how to reverse a linked list in Python","mode":"suggest","queries_today":8,"total_queries":351,"ts":1775731206}
+{"evt":"end","preview":"To reverse a linked list, iterate through the nodes and reverse each pointer"}
+{"state":"idle","query":"how to reverse a linked list in Python","mode":"suggest","queries_today":8,"total_queries":351,"ts":1775731208}
