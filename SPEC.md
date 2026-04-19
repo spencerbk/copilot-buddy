@@ -2,7 +2,7 @@
 
 ## Overview
 
-An ESP32-S3-based desk pet that connects to your computer and reacts to
+An ESP32-S2/S3-based desk pet that connects to your computer and reacts to
 GitHub Copilot CLI (`gh copilot`) activity in real time. Displays an
 animated character on an attached TFT/OLED screen that sleeps when idle,
 works when a query is in-flight, celebrates on completion, and more.
@@ -23,6 +23,12 @@ by Anthropic (MIT licensed).
 | **ESP32-S3 DevKit + SSD1306** | 128×64 OLED    | Cheapest, ASCII-only            |
 | **ESP32-S3 DevKit + ST7789**  | 240×240 TFT    | Good balance of size and color  |
 | **ESP32-S3 DevKit + ILI9341** | 240×320 TFT    | Largest, supports GIF pets      |
+| **QT Py ESP32-S2 + SSD1306** | 128×64 OLED    | STEMMA QT, no BLE               |
+| **QT Py ESP32-S2 + ST7789**  | 240×240 TFT    | Tiny board, SPI wiring, no BLE  |
+| **QT Py ESP32-S2 + ILI9341** | 240×320 TFT    | Tiny board, SPI wiring, no BLE  |
+| **QT Py ESP32-S3 + SSD1306** | 128×64 OLED    | STEMMA QT plug-and-play         |
+| **QT Py ESP32-S3 + ST7789**  | 240×240 TFT    | Tiny board, SPI wiring          |
+| **QT Py ESP32-S3 + ILI9341** | 240×320 TFT    | Tiny board, SPI wiring          |
 
 ### Pin Defaults (generic wiring, configurable)
 
@@ -48,7 +54,7 @@ JSON events to the ESP32 over **USB serial** or **BLE**.
 
 ```
 ┌──────────────────┐        USB/BLE         ┌──────────────────┐
-│   Your Computer  │  ───────────────────▶  │    ESP32-S3      │
+│   Your Computer  │  ───────────────────▶  │  ESP32-S2/S3     │
 │                  │    JSON messages        │                  │
 │  ┌────────────┐  │    (newline-delim)      │  ┌────────────┐  │
 │  │ gh copilot │  │                        │  │  Display    │  │
@@ -449,7 +455,7 @@ copilot-buddy/
 ## Implementation Order
 
 ### Phase 1 — Hello World
-1. Wire up ESP32-S3 + display
+1. Wire up ESP32 + display
 2. Get a static ASCII art character rendering on screen
 3. Confirm USB serial echo (send JSON in, parse it, print to serial)
 
@@ -486,7 +492,7 @@ copilot-buddy/
 
 ## Acceptance Criteria
 
-- [ ] ESP32-S3 displays an animated ASCII pet on attached screen
+- [ ] ESP32 displays an animated ASCII pet on attached screen
 - [ ] Pet state changes in real time when `gh copilot suggest/explain` runs
 - [ ] At least 6 selectable pets with 7 animation states each
 - [ ] Host bridge script auto-detects serial port and sends heartbeats

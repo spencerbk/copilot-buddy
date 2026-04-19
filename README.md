@@ -1,6 +1,6 @@
 # copilot-buddy
 
-An ESP32-S3 desk pet that reacts to GitHub Copilot CLI activity in real time.
+An ESP32-S2/S3 desk pet that reacts to GitHub Copilot CLI activity in real time.
 
 Inspired by [claude-desktop-buddy](https://github.com/anthropics/claude-desktop-buddy) by Anthropic.
 
@@ -10,7 +10,7 @@ Inspired by [claude-desktop-buddy](https://github.com/anthropics/claude-desktop-
 
 ## What Is This?
 
-A small animated character lives on your desk, displayed on a TFT or OLED screen connected to an ESP32-S3. When you use `gh copilot suggest` or `gh copilot explain`, the pet reacts — working hard while your query runs, celebrating milestones, and sleeping when idle.
+A small animated character lives on your desk, displayed on a TFT or OLED screen connected to an ESP32-S2 or ESP32-S3. When you use `gh copilot suggest` or `gh copilot explain`, the pet reacts — working hard while your query runs, celebrating milestones, and sleeping when idle.
 
 ### Pet States
 
@@ -39,6 +39,12 @@ Six ASCII art pets included: **Octocat**, **Crab**, **Fox**, **Owl**, **Robot**,
 | **ESP32-S3 DevKit + ILI9341** | 240×320 TFT    | Largest screen                  |
 | **M5StickC Plus2**            | 135×240 TFT    | All-in-one, no wiring needed   |
 | **LILYGO T-Display-S3**      | 170×320 TFT    | Built-in display, USB-C        |
+| **QT Py ESP32-S2 + SSD1306** | 128×64 OLED    | STEMMA QT plug-and-play, no BLE |
+| **QT Py ESP32-S2 + ST7789**  | 240×240 TFT    | Tiny board, SPI wiring, no BLE  |
+| **QT Py ESP32-S2 + ILI9341** | 240×320 TFT    | Tiny board, SPI wiring, no BLE  |
+| **QT Py ESP32-S3 + SSD1306** | 128×64 OLED    | STEMMA QT plug-and-play         |
+| **QT Py ESP32-S3 + ST7789**  | 240×240 TFT    | Tiny board, SPI wiring          |
+| **QT Py ESP32-S3 + ILI9341** | 240×320 TFT    | Tiny board, SPI wiring          |
 
 See [docs/wiring.md](docs/wiring.md) for pin diagrams.
 
@@ -46,7 +52,7 @@ See [docs/wiring.md](docs/wiring.md) for pin diagrams.
 
 ## Quick Start
 
-### 1. Flash firmware to your ESP32-S3
+### 1. Flash firmware to your ESP32
 
 Three firmware options are provided — pick one:
 
@@ -57,7 +63,7 @@ Three firmware options are provided — pick one:
 | **Arduino (C++)** | `firmware/arduino/` | Performance, C++ developers |
 
 **CircuitPython setup:**
-1. Install [CircuitPython 9.x](https://circuitpython.org/downloads) on your ESP32-S3
+1. Install [CircuitPython 9.x](https://circuitpython.org/downloads) on your ESP32-S2 or ESP32-S3
 2. Install libraries: `adafruit_st7789` (or your display driver), `adafruit_display_text`
 3. Edit `config.py` — uncomment your board
 4. Copy all files from `firmware/circuitpython/` to the `CIRCUITPY` drive
@@ -89,7 +95,7 @@ Your desk pet will transition: idle → busy → attention → idle.
 
 ```
 ┌──────────────────┐        USB Serial       ┌──────────────────┐
-│   Your Computer  │  ──────────────────▶   │    ESP32-S3      │
+│   Your Computer  │  ──────────────────▶   │  ESP32-S2/S3     │
 │                  │    JSON messages        │                  │
 │  ┌────────────┐  │    (newline-delim)      │  ┌────────────┐  │
 │  │ gh copilot │  │                        │  │  Display    │  │
@@ -136,7 +142,7 @@ copilot-buddy/
 - ✅ Persistent query stats across reboots
 - ✅ Screen auto-off after 30s idle, wake on activity
 - ✅ Button: short press cycles pets, long press shows stats
-- ✅ Works with 5 board/display combinations
+- ✅ Works with 11 board/display combinations
 - ✅ Three firmware options (CircuitPython, MicroPython, Arduino)
 - ✅ Protocol test fixtures for development without hardware
 

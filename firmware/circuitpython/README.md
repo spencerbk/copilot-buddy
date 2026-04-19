@@ -4,7 +4,7 @@ The recommended firmware for copilot-buddy. Easiest to set up and modify.
 
 ## Requirements
 
-- ESP32-S3 board with a supported display (see [docs/wiring.md](../../docs/wiring.md))
+- ESP32-S2 or ESP32-S3 board with a supported display (see [docs/wiring.md](../../docs/wiring.md))
 - [CircuitPython 9.x](https://circuitpython.org/downloads) flashed to the board
 - Adafruit CircuitPython libraries (see below)
 
@@ -24,7 +24,7 @@ Only install the display driver for your specific display.
 
 ## Setup
 
-1. **Flash CircuitPython** to your ESP32-S3 board
+1. **Flash CircuitPython** to your ESP32-S2 or ESP32-S3 board
 2. **Install libraries** — copy the required `.mpy` files to `CIRCUITPY/lib/`
 3. **Edit `config.py`** — uncomment the line matching your board:
    ```python

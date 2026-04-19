@@ -18,6 +18,7 @@ Detect the project ecosystem by scanning the workspace root for marker files, th
 | `package.json` + `tsconfig.json` | TypeScript | `typescript-orchestrator` |
 | `code.py` + `lib/` with `adafruit_*` packages | CircuitPython | `circuitpython-orchestrator` |
 | `boot.py` or `main.py` with `machine` module imports | MicroPython | `micropython-orchestrator` |
+| `*.ino` files or `sketch.yaml` or Arduino library structure (`library.properties`) | Arduino | `arduino-orchestrator` |
 | `pyproject.toml` or `setup.py` or `requirements.txt` | Python | `python-orchestrator` |
 
 ## Steps

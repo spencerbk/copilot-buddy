@@ -1,10 +1,10 @@
 # Copilot Buddy — Wire Protocol
 
-Wire protocol between the host bridge (CPython) and the ESP32-S3 desk pet.
+Wire protocol between the host bridge (CPython) and the ESP32 desk pet.
 
 ## Transport
 
-- **Physical:** USB CDC serial (ESP32-S3 native USB)
+- **Physical:** USB CDC serial (ESP32-S2/S3 native USB)
 - **Baud rate:** 115 200
 - **Framing:** Newline-delimited UTF-8 JSON (`\n` terminator)
 - **Max line length:** 512 bytes (messages exceeding this are silently dropped)

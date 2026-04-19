@@ -124,6 +124,142 @@ BOARD_DEVKIT_ILI9341 = {
     "button_active_low": True,
 }
 
+BOARD_QTPY_S2_SSD1306 = {
+    "name": "QT Py ESP32-S2 + SSD1306",
+    "display_type": "SSD1306",
+    "width": 128,
+    "height": 64,
+    "rotation": 0,
+    # I2C pins (STEMMA QT connector)
+    "sda": 41,
+    "scl": 40,
+    "i2c_addr": 0x3C,
+    "bus_frequency": 400_000,
+    # No backlight on OLED
+    "bl": None,
+    "bl_active_high": False,
+    "color_order": None,
+    "colstart": 0,
+    "rowstart": 0,
+    # BOOT button (active low with pull-up)
+    "button_pin": 0,
+    "button_active_low": True,
+}
+
+BOARD_QTPY_S2_ST7789 = {
+    "name": "QT Py ESP32-S2 + ST7789",
+    "display_type": "ST7789",
+    "width": 240,
+    "height": 240,
+    "rotation": 0,
+    # SPI pins
+    "sck": 36,
+    "mosi": 35,
+    "cs": 18,       # A0
+    "dc": 17,       # A1
+    "rst": 9,       # A2
+    "bl": 8,        # A3
+    "bl_active_high": True,
+    "bus_frequency": 24_000_000,
+    "color_order": "BGR",
+    "colstart": 0,
+    "rowstart": 0,
+    # BOOT button (active low with pull-up)
+    "button_pin": 0,
+    "button_active_low": True,
+}
+
+BOARD_QTPY_S2_ILI9341 = {
+    "name": "QT Py ESP32-S2 + ILI9341",
+    "display_type": "ILI9341",
+    "width": 240,
+    "height": 320,
+    "rotation": 0,
+    # SPI pins (same as ST7789)
+    "sck": 36,
+    "mosi": 35,
+    "cs": 18,
+    "dc": 17,
+    "rst": 9,
+    "bl": 8,
+    "bl_active_high": True,
+    "bus_frequency": 24_000_000,
+    "color_order": "BGR",
+    "colstart": 0,
+    "rowstart": 0,
+    # BOOT button (active low with pull-up)
+    "button_pin": 0,
+    "button_active_low": True,
+}
+
+BOARD_QTPY_S3_SSD1306 = {
+    "name": "QT Py ESP32-S3 + SSD1306",
+    "display_type": "SSD1306",
+    "width": 128,
+    "height": 64,
+    "rotation": 0,
+    # I2C pins (STEMMA QT connector)
+    "sda": 41,
+    "scl": 40,
+    "i2c_addr": 0x3C,
+    "bus_frequency": 400_000,
+    # No backlight on OLED
+    "bl": None,
+    "bl_active_high": False,
+    "color_order": None,
+    "colstart": 0,
+    "rowstart": 0,
+    # BOOT button (active low with pull-up)
+    "button_pin": 0,
+    "button_active_low": True,
+}
+
+BOARD_QTPY_S3_ST7789 = {
+    "name": "QT Py ESP32-S3 + ST7789",
+    "display_type": "ST7789",
+    "width": 240,
+    "height": 240,
+    "rotation": 0,
+    # SPI pins
+    "sck": 36,
+    "mosi": 35,
+    "cs": 18,       # A0
+    "dc": 17,       # A1
+    "rst": 9,       # A2
+    "bl": 8,        # A3
+    "bl_active_high": True,
+    "bus_frequency": 24_000_000,
+    "color_order": "BGR",
+    "colstart": 0,
+    "rowstart": 0,
+    # BOOT button (active low with pull-up)
+    "button_pin": 0,
+    "button_active_low": True,
+}
+
+BOARD_QTPY_S3_ILI9341 = {
+    "name": "QT Py ESP32-S3 + ILI9341",
+    "display_type": "ILI9341",
+    "width": 240,
+    "height": 320,
+    "rotation": 0,
+    # SPI pins (same as ST7789)
+    "sck": 36,
+    "mosi": 35,
+    "cs": 18,
+    "dc": 17,
+    "rst": 9,
+    "bl": 8,
+    "bl_active_high": True,
+    "bus_frequency": 24_000_000,
+    "color_order": "BGR",
+    "colstart": 0,
+    "rowstart": 0,
+    # BOOT button (active low with pull-up)
+    "button_pin": 0,
+    "button_active_low": True,
+}
+
 
 # ──── SELECT YOUR BOARD ─────────────────────────────────────────
 # Uncomment the line matching your hardware:
@@ -133,6 +269,12 @@ BOARD_DEVKIT_ILI9341 = {
 # ACTIVE_BOARD = BOARD_DEVKIT_SSD1306
 ACTIVE_BOARD = BOARD_DEVKIT_ST7789         # ← default
 # ACTIVE_BOARD = BOARD_DEVKIT_ILI9341
+# ACTIVE_BOARD = BOARD_QTPY_S2_SSD1306
+# ACTIVE_BOARD = BOARD_QTPY_S2_ST7789
+# ACTIVE_BOARD = BOARD_QTPY_S2_ILI9341
+# ACTIVE_BOARD = BOARD_QTPY_S3_SSD1306
+# ACTIVE_BOARD = BOARD_QTPY_S3_ST7789
+# ACTIVE_BOARD = BOARD_QTPY_S3_ILI9341
 
 
 def get_config():
