@@ -301,27 +301,84 @@ class TestDetect:
     def test_explicit_port_returned_directly(self) -> None:
         assert detect_port("COM3", []) == "COM3"
 
-    def test_handshake_detection_preferred(self) -> None:
-        transport = type("Transport", (), {"auto_detect_port": lambda self: "COM7"})()
-        with patch("bridge.hook_bridge.detect.SerialTransport", return_value=transport):
+    def test_vid_detection_preferred_over_handshake(self) -> None:
+        """A single VID match should avoid the slower handshake probe."""
+
+        class FakePort:
+            def __init__(self, device: str, vid: int | None, description: str = "") -> None:
+                self.device = device
+                self.vid = vid
+                self.pid = 0x80F4
+                self.description = description
+
+        fake_ports = [
+            FakePort("COM3", vid=None, description="Intel Serial IO"),
+            FakePort("COM7", vid=0x239A, description="USB Serial Device"),
+        ]
+        with patch("serial.tools.list_ports.comports", return_value=fake_ports), \
+             patch("bridge.hook_bridge.detect.SerialTransport", None):
             result = detect_port(None, ["CircuitPython"], baud=115200)
         assert result == "COM7"
 
+    def test_multiple_vid_matches_fall_back_to_handshake(self) -> None:
+        """Multiple VID matches should be disambiguated by handshake."""
+
+        class FakePort:
+            def __init__(
+                self,
+                device: str,
+                vid: int | None,
+                description: str = "",
+            ) -> None:
+                self.device = device
+                self.vid = vid
+                self.pid = 0x80F4
+                self.description = description
+
+        fake_ports = [
+            FakePort("COM6", vid=0x239A, description="USB Serial Device"),
+            FakePort("COM7", vid=0x239A, description="USB Serial Device"),
+        ]
+        transport = type("Transport", (), {"auto_detect_port": lambda self: "COM7"})()
+        with patch("serial.tools.list_ports.comports", return_value=fake_ports), \
+             patch("bridge.hook_bridge.detect.SerialTransport", return_value=transport):
+            result = detect_port(None, ["CircuitPython"], baud=115200)
+        assert result == "COM7"
+
+    def test_handshake_fallback_when_no_vid_match(self) -> None:
+        """Handshake probe runs when no VID matches."""
+
+        class FakePort:
+            def __init__(self, device: str, vid: int | None, description: str = "") -> None:
+                self.device = device
+                self.vid = vid
+                self.pid = None
+                self.description = description
+
+        fake_ports = [FakePort("COM3", vid=None, description="Intel Serial IO")]
+        transport = type("Transport", (), {"auto_detect_port": lambda self: "COM9"})()
+        with patch("serial.tools.list_ports.comports", return_value=fake_ports), \
+             patch("bridge.hook_bridge.detect.SerialTransport", return_value=transport):
+            result = detect_port(None, ["CircuitPython"], baud=115200)
+        assert result == "COM9"
+
     def test_description_match_fallback(self) -> None:
-        """Description matching is used when handshake probing finds nothing."""
+        """Description matching is used when VID and handshake find nothing."""
 
         class FakePort:
             def __init__(self, device: str, description: str) -> None:
                 self.device = device
                 self.description = description
+                self.vid = None
+                self.pid = None
 
         fake_ports = [
             FakePort("COM1", "Intel Serial IO"),
             FakePort("COM7", "CircuitPython CDC data"),
         ]
         transport = type("Transport", (), {"auto_detect_port": lambda self: None})()
-        with patch("bridge.hook_bridge.detect.SerialTransport", return_value=transport), \
-             patch("serial.tools.list_ports.comports", return_value=fake_ports):
+        with patch("serial.tools.list_ports.comports", return_value=fake_ports), \
+             patch("bridge.hook_bridge.detect.SerialTransport", return_value=transport):
             result = detect_port(None, ["CircuitPython"], baud=115200)
         assert result == "COM7"
 
@@ -330,11 +387,13 @@ class TestDetect:
             def __init__(self, device: str, description: str) -> None:
                 self.device = device
                 self.description = description
+                self.vid = None
+                self.pid = None
 
         fake_ports = [FakePort("COM1", "Intel Serial IO")]
         transport = type("Transport", (), {"auto_detect_port": lambda self: None})()
-        with patch("bridge.hook_bridge.detect.SerialTransport", return_value=transport), \
-             patch("serial.tools.list_ports.comports", return_value=fake_ports):
+        with patch("serial.tools.list_ports.comports", return_value=fake_ports), \
+             patch("bridge.hook_bridge.detect.SerialTransport", return_value=transport):
             result = detect_port(None, ["CircuitPython"], baud=115200)
         assert result is None
 

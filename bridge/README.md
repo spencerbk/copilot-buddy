@@ -36,7 +36,7 @@ Uses the standalone Copilot CLI's `.github/hooks/` system — no background scri
        "serial_port": "COM7"
      }
      ```
-   - **Auto-detect:** If neither is set, the bridge probes the device with the status handshake and then falls back to USB description matching.
+   - **Auto-detect:** If neither is set, the bridge tries USB VID matching (Adafruit / Espressif), then falls back to a status-handshake probe, then USB description matching.
 3. Run Copilot CLI from within this repository — hooks load automatically from `.github/hooks/`.
 
 That's it. The pet reacts to Copilot CLI activity with no daemon running.
@@ -101,7 +101,7 @@ python -m bridge.copilot_bridge --transport loopback
 2. **CLI file watcher** — Watches `~/.copilot/` for file changes to detect per-turn activity in the standalone `copilot` CLI. Provides query text from `command-history-state.json` and turn-end detection via `events.jsonl` quiescence.
 3. **Event detection** — When a new Copilot process appears a `start` event is emitted; when it disappears an `end` event is emitted and the daily query counter increments. Both watchers feed a shared activity log.
 4. **Heartbeat** — Every 2 seconds the bridge sends a heartbeat message containing the current state (`idle` / `busy`), `queries_today`, `total_queries`, a one-line `msg` summary, and a recent `entries` activity log for the device's HUD transcript.
-5. **Serial transport** — Messages are newline-delimited JSON sent over USB serial at 115200 baud. The bridge can auto-detect the correct COM port by sending a `{"cmd":"status"}` handshake and waiting for an `{"ack":"status"}` reply.
+5. **Serial transport** — Messages are newline-delimited JSON sent over USB serial at 115200 baud. The bridge can auto-detect the correct COM port by matching known USB vendor IDs (Adafruit, Espressif), sending a `{"cmd":"status"}` handshake, or falling back to USB description matching.
 
 ## Running tests
 

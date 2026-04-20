@@ -87,7 +87,7 @@ Configure the serial port (pick one method):
 - **Windows PowerShell:** `$env:COPILOT_BUDDY_PORT = "COM7"`
 - **Linux/macOS shell:** `export COPILOT_BUDDY_PORT=/dev/ttyACM0`
 - **Config file:** Create `.copilot-buddy.local.json` in the repo root: `{"serial_port": "COM7"}`
-- **Auto-detect:** Leave unconfigured and it will probe for the device, then fall back to USB description matching
+- **Auto-detect:** Leave unconfigured — the bridge tries USB VID matching first, then a handshake probe, then USB description matching
 
 Then just use Copilot CLI from within this repo — hooks fire automatically.
 
