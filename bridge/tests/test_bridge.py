@@ -251,10 +251,32 @@ def test_get_repo_name_caches() -> None:
 
 def test_entry_includes_repo_prefix() -> None:
     """Entries should include the repo name prefix."""
+    from bridge.constants import abbreviate_repo
     from bridge.copilot_bridge import _add_entry, _entries, _get_repo_name
     _entries.clear()
     _add_entry("hello")
     entry = _entries[0]
-    repo = _get_repo_name()[:6]
+    repo = abbreviate_repo(_get_repo_name())
     assert entry.startswith(repo)
     _entries.clear()
+
+
+def test_abbreviate_repo_hyphenated() -> None:
+    """Hyphenated repo names become initials."""
+    from bridge.constants import abbreviate_repo
+    assert abbreviate_repo("copilot-buddy") == "c-b"
+    assert abbreviate_repo("my-cool-project") == "m-c-p"
+
+
+def test_abbreviate_repo_single_word() -> None:
+    """Single-word repo names are truncated to 6 chars."""
+    from bridge.constants import abbreviate_repo
+    assert abbreviate_repo("react") == "react"
+    assert abbreviate_repo("longername") == "longer"
+
+
+def test_abbreviate_repo_capped() -> None:
+    """Abbreviation is capped at 6 chars for many-segment repos."""
+    from bridge.constants import abbreviate_repo
+    result = abbreviate_repo("a-b-c-d-e-f-g-h-i-j")
+    assert len(result) <= 6

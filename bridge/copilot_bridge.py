@@ -25,6 +25,7 @@ from bridge.constants import (
     STATE_BUSY,
     STATE_IDLE,
     STATE_SLEEP,
+    abbreviate_repo,
 )
 from bridge.transport_loopback import LoopbackTransport
 from bridge.transport_serial import SerialTransport
@@ -77,7 +78,7 @@ _entries: list[str] = []
 
 def _add_entry(query: str) -> None:
     """Prepend a repo-prefixed, timestamped query to the entries ring buffer."""
-    repo = _get_repo_name()[:6]  # truncate repo name to 6 chars
+    repo = abbreviate_repo(_get_repo_name())
     ts = datetime.now().strftime("%H:%M")
     # Format: "repo HH:MM query" — budget chars for repo + space + time + space
     prefix = f"{repo} {ts} "

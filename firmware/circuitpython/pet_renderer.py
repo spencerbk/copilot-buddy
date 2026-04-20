@@ -148,7 +148,7 @@ def render_hud(group, entries, msg, scroll_offset=0):
         last = group[_HUD_LINE_1 + _HUD_LINES - 1]
         existing = last.text
         if existing:
-            max_w = 20
+            max_w = 26  # must match MAX_ENTRY_LEN in bridge/constants.py
             last.text = existing[:max_w - 3] + " -" + str(scroll_offset)
 
 

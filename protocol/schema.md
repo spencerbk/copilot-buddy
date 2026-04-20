@@ -24,7 +24,7 @@ Sent every **2 seconds** by the bridge so the device knows the host is
 alive and can update its display without polling.
 
 ```json
-{"state":"busy","mode":"suggest","queries_today":12,"total_queries":347,"ts":1775731234,"msg":"working...","entries":["copilo 10:42 regex","copilo 10:39 awk"]}
+{"state":"busy","mode":"suggest","queries_today":12,"total_queries":347,"ts":1775731234,"msg":"working...","entries":["c-b 10:42 regex for email","c-b 10:39 awk column sum"]}
 ```
 
 | Field           | Type     | Required | Description                                           |
@@ -39,8 +39,10 @@ alive and can update its display without polling.
 | `query`         | string   | no       | Current query text. Omitted when `entries` is present.|
 
 **Entry format:** Each entry is `"<repo> HH:MM <query>"`, truncated to
-20 characters (matching the 240 px display at 2× font scale). The repo
-prefix is the first 6 characters of the current git repository name.
+26 characters (matching the 320 px ILI9341 display at 2× font scale).
+The repo prefix is an abbreviation of the current git repository name:
+hyphenated names become initials (e.g. `copilot-buddy` → `c-b`),
+single-word names are truncated to 6 characters.
 The bridge builds entries from both the process watcher
 (`gh copilot suggest/explain`) and the CLI file watcher (standalone
 `copilot` CLI). The total serialized heartbeat line must stay under

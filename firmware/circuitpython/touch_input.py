@@ -47,7 +47,18 @@ class TouchInput:
         try:
             import adafruit_focaltouch  # noqa: PLC0415
 
-            i2c = busio.I2C(scl_pin, sda_pin)
+            # Prefer board.STEMMA_I2C() — the Adafruit-recommended singleton
+            # for STEMMA QT I2C devices.  Falls back to raw busio.I2C() for
+            # non-Adafruit boards or when STEMMA_I2C is unavailable.
+            i2c = None
+            try:
+                import board as _board  # noqa: PLC0415
+                i2c = _board.STEMMA_I2C()
+            except (ImportError, AttributeError, RuntimeError, ValueError):
+                pass
+            if i2c is None:
+                i2c = busio.I2C(scl_pin, sda_pin)
+
             self._ft = adafruit_focaltouch.Adafruit_FocalTouch(
                 i2c, address=touch_addr,
             )

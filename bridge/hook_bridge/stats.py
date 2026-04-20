@@ -16,7 +16,7 @@ import tempfile
 from dataclasses import dataclass, field
 from datetime import date, datetime
 
-from bridge.constants import MAX_ENTRIES, MAX_ENTRY_LEN, MILESTONE_INTERVAL
+from bridge.constants import MAX_ENTRIES, MAX_ENTRY_LEN, MILESTONE_INTERVAL, abbreviate_repo
 
 log = logging.getLogger(__name__)
 
@@ -38,9 +38,9 @@ class HookStats:
 
 
 def _repo_prefix() -> str:
-    """Return a short repo name from the cwd (max 6 chars)."""
+    """Return a short repo name from the cwd for HUD display."""
     name = os.path.basename(os.getcwd()) or "repo"
-    return name[:6]
+    return abbreviate_repo(name)
 
 
 def load_stats() -> HookStats:

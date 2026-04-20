@@ -37,6 +37,7 @@
 ## Git operations
 
 - Do not run `git commit` or `git push` unless the user explicitly asks you to commit and/or push.
+- Do not merge pull requests (via `gh pr merge`, `git merge`, or any equivalent) unless the user explicitly asks you to merge. Opening a PR does not imply permission to merge it.
 - Making code changes does not imply permission to commit or push them.
 - When the user wants to commit, they will invoke the commit-push skill or give an explicit instruction.
 - Do not resolve merge conflicts by replacing the entire file with one side's version. This includes `git checkout --theirs`, `git checkout --ours`, and any whole-file side selection — these silently discard the other side's changes.
