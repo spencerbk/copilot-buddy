@@ -14,6 +14,7 @@ import logging
 import signal
 import sys
 import time
+from datetime import datetime
 
 from bridge.cli_watcher import CLIWatcher
 from bridge.transport_loopback import LoopbackTransport
@@ -24,6 +25,41 @@ log = logging.getLogger("copilot_bridge")
 
 # Heartbeat cadence in seconds.
 _HEARTBEAT_INTERVAL = 2.0
+
+# HUD transcript ring buffer config.
+_MAX_ENTRIES = 5
+_MAX_ENTRY_LEN = 34
+_MAX_LINE_BYTES = 480  # leave headroom under 512-byte device limit
+
+
+# ------------------------------------------------------------------
+# Transcript ring buffer
+# ------------------------------------------------------------------
+
+_entries: list[str] = []
+
+
+def _add_entry(query: str) -> None:
+    """Prepend a timestamped query to the entries ring buffer."""
+    ts = datetime.now().strftime("%H:%M")
+    # 6 chars for "HH:MM ", remainder for query
+    max_q = _MAX_ENTRY_LEN - len(ts) - 1
+    q = query[:max_q] if query else "(no query)"
+    entry = f"{ts} {q}"
+    _entries.insert(0, entry)
+    while len(_entries) > _MAX_ENTRIES:
+        _entries.pop()
+
+
+def _build_msg(state: str, connected: bool) -> str:
+    """Build a one-line summary suitable for the HUD."""
+    if not connected:
+        return "No Copilot connected"
+    if state == "busy":
+        return "working..."
+    if state == "sleep":
+        return "sleeping"
+    return "idle"
 
 
 # ------------------------------------------------------------------
@@ -73,6 +109,9 @@ def run(
             events = []
 
         for evt in events:
+            # Add start events to the transcript ring buffer
+            if evt.get("evt") == "start" and evt.get("query"):
+                _add_entry(evt["query"])
             _send_event(transport, evt)
 
         # --- Poll CLI file watcher ---------------------------------
@@ -84,6 +123,9 @@ def run(
                 log.error("CLI watcher poll failed", exc_info=True)
 
         for evt in cli_events:
+            # Add start events to the transcript ring buffer
+            if evt.get("evt") == "start" and evt.get("query"):
+                _add_entry(evt["query"])
             _send_event(transport, evt)
 
         # --- Periodic heartbeat ------------------------------------
@@ -107,14 +149,33 @@ def run(
                 hb_queries_today = watcher.queries_today
                 hb_total = watcher.total_queries
 
-            heartbeat = {
+            connected = hb_state != "sleep" or hb_total > 0
+
+            heartbeat: dict = {
                 "state": hb_state,
-                "query": hb_query,
                 "mode": hb_mode,
                 "queries_today": hb_queries_today,
                 "total_queries": hb_total,
                 "ts": int(time.time()),
+                "msg": _build_msg(hb_state, connected),
             }
+
+            # Include entries if we have them (saves bytes vs always sending [])
+            if _entries:
+                heartbeat["entries"] = list(_entries)
+
+            # Only include query when no entries (saves bytes)
+            if not _entries and hb_query:
+                heartbeat["query"] = hb_query
+
+            # Safety: trim entries if serialized line exceeds byte budget
+            line = json.dumps(heartbeat, separators=(",", ":"))
+            while len(line.encode("utf-8")) > _MAX_LINE_BYTES and heartbeat.get("entries"):
+                heartbeat["entries"].pop()
+                if not heartbeat["entries"]:
+                    del heartbeat["entries"]
+                line = json.dumps(heartbeat, separators=(",", ":"))
+
             _send_event(transport, heartbeat)
             last_heartbeat = now
 

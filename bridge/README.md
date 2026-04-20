@@ -41,14 +41,16 @@ python -m bridge.copilot_bridge --transport loopback
 | `--baud RATE` | `115200` | Serial baud rate |
 | `--transport {serial,loopback}` | `serial` | Transport backend |
 | `--poll-interval SECS` | `1.0` | Process scan interval |
+| `--copilot-dir DIR` | auto | Path to `~/.copilot` directory |
 | `-v, --verbose` | off | Enable debug logging |
 
 ## How it works
 
 1. **Process scanning** — Every `--poll-interval` seconds the bridge calls `psutil.process_iter()` and looks for Copilot CLI processes by executable name (`gh` with `copilot` in the arguments, or the standalone `copilot` executable).
-2. **Event detection** — When a new Copilot process appears a `start` event is emitted; when it disappears an `end` event is emitted and the daily query counter increments.
-3. **Heartbeat** — Every 2 seconds the bridge sends a heartbeat message containing the current state (`idle` / `busy`), `queries_today`, and `total_queries`.
-4. **Serial transport** — Messages are newline-delimited JSON sent over USB serial at 115200 baud. The bridge can auto-detect the correct COM port by sending a `{"cmd":"status"}` handshake and waiting for an `{"ack":"status"}` reply.
+2. **CLI file watcher** — Watches `~/.copilot/` for file changes to detect per-turn activity in the standalone `copilot` CLI. Provides query text from `command-history-state.json` and turn-end detection via `events.jsonl` quiescence.
+3. **Event detection** — When a new Copilot process appears a `start` event is emitted; when it disappears an `end` event is emitted and the daily query counter increments. Both watchers feed a shared activity log.
+4. **Heartbeat** — Every 2 seconds the bridge sends a heartbeat message containing the current state (`idle` / `busy`), `queries_today`, `total_queries`, a one-line `msg` summary, and a recent `entries` activity log for the device's HUD transcript.
+5. **Serial transport** — Messages are newline-delimited JSON sent over USB serial at 115200 baud. The bridge can auto-detect the correct COM port by sending a `{"cmd":"status"}` handshake and waiting for an `{"ack":"status"}` reply.
 
 ## Running tests
 

@@ -26,7 +26,7 @@ A small animated character lives on your desk, displayed on a TFT or OLED screen
 
 ### Choose Your Pet
 
-Six ASCII art pets included: **Octocat**, **Crab**, **Fox**, **Owl**, **Robot**, **Ghost**. Cycle through them with a button press.
+Six ASCII art pets included: **Octocat**, **Crab**, **Fox**, **Owl**, **Robot**, **Ghost**. Cycle through them with a long press.
 
 ---
 
@@ -147,7 +147,8 @@ copilot-buddy/
 - ✅ Real-time Copilot CLI activity detection
 - ✅ Persistent query stats across reboots
 - ✅ Screen auto-off after 30s idle, wake on activity
-- ✅ Button: short press cycles pets, long press shows stats
+- ✅ HUD transcript: 3-line activity log at the bottom of the display
+- ✅ Button: short press scrolls transcript, long press cycles pets
 - ✅ Works with many board/display combinations (see table above)
 - ✅ Three firmware options (CircuitPython, MicroPython, Arduino)
 - ✅ Protocol test fixtures for development without hardware

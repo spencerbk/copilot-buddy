@@ -64,6 +64,10 @@ class StateManager:
         self.total_queries = 0
         self.disconnected = False
 
+        # HUD transcript data (populated from heartbeats)
+        self.entries = []   # list of timestamped activity strings
+        self.msg = ""       # one-line summary for display
+
         self._timed_state = None
         self._timed_until = 0.0
         self._last_heartbeat = 0.0
@@ -122,6 +126,12 @@ class StateManager:
         self.queries_today = msg.get("queries_today", self.queries_today)
         self.total_queries = msg.get("total_queries", self.total_queries)
 
+        # HUD transcript fields
+        if "entries" in msg:
+            self.entries = msg["entries"]
+        if "msg" in msg:
+            self.msg = msg["msg"]
+
         hb_state = msg.get("state", "idle")
         if hb_state == "error":
             self._set_timed(STATE_DIZZY, now)
@@ -158,6 +168,11 @@ class StateManager:
                 self.disconnected = True
             else:
                 self.disconnected = False
+
+        # Override HUD on disconnect — stale entries are misleading
+        if self.disconnected:
+            self.msg = "~ disconnected ~"
+            self.entries = []
 
         # Pick highest-priority active state
         if self._timed_state is not None:
