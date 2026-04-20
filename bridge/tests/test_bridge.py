@@ -174,24 +174,26 @@ def test_entry_format_timestamp_prefix() -> None:
 
 
 def test_entry_truncation() -> None:
-    """Entries should be truncated to _MAX_ENTRY_LEN."""
-    from bridge.copilot_bridge import _MAX_ENTRY_LEN, _add_entry, _entries
+    """Entries should be truncated to MAX_ENTRY_LEN."""
+    from bridge.constants import MAX_ENTRY_LEN
+    from bridge.copilot_bridge import _add_entry, _entries
     _entries.clear()
     long_query = "a" * 100
     _add_entry(long_query)
-    assert len(_entries[0]) <= _MAX_ENTRY_LEN
+    assert len(_entries[0]) <= MAX_ENTRY_LEN
     _entries.clear()
 
 
 def test_entries_ring_buffer_cap() -> None:
-    """Ring buffer should not exceed _MAX_ENTRIES."""
-    from bridge.copilot_bridge import _MAX_ENTRIES, _add_entry, _entries
+    """Ring buffer should not exceed MAX_ENTRIES."""
+    from bridge.constants import MAX_ENTRIES
+    from bridge.copilot_bridge import _add_entry, _entries
     _entries.clear()
-    for i in range(_MAX_ENTRIES + 3):
+    for i in range(MAX_ENTRIES + 3):
         _add_entry("query {}".format(i))
-    assert len(_entries) == _MAX_ENTRIES
+    assert len(_entries) == MAX_ENTRIES
     # Newest should be first
-    assert "query {}".format(_MAX_ENTRIES + 2) in _entries[0]
+    assert "query {}".format(MAX_ENTRIES + 2) in _entries[0]
     _entries.clear()
 
 

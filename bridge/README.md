@@ -1,6 +1,11 @@
 # copilot-buddy Bridge
 
-The bridge monitors your computer for GitHub Copilot CLI activity (`gh copilot suggest` / `gh copilot explain` or the standalone `copilot` CLI) and streams real-time events to the ESP32 desk-pet over USB serial. It scans the process table with psutil, detects when Copilot queries start and end, tracks daily usage stats, and sends heartbeats so the pet always knows you're there.
+The bridge connects your computer to the ESP32 desk-pet, streaming real-time Copilot CLI events over USB serial. Two modes are available:
+
+| Mode | How it works | Requires daemon? |
+|------|-------------|-----------------|
+| **Hook mode** (recommended) | Copilot CLI's native hooks push events directly | No |
+| **Daemon mode** | Long-running script polls for Copilot processes | Yes |
 
 ## Requirements
 
@@ -15,9 +20,55 @@ cd bridge
 pip install -r requirements.txt
 ```
 
-## Usage
+## Hook Mode (recommended)
 
-Run from the **repository root**:
+Uses the standalone Copilot CLI's `.github/hooks/` system — no background script needed. Copilot CLI invokes a short-lived Python process on each lifecycle event (session start, tool use, agent stop, etc.). Use daemon mode for `gh copilot suggest` / `gh copilot explain`.
+
+### Setup
+
+1. Flash the firmware to your ESP32 (see the main README).
+2. Configure the serial port (pick one):
+   - **Windows PowerShell:** `$env:COPILOT_BUDDY_PORT = "COM7"`
+   - **Linux/macOS shell:** `export COPILOT_BUDDY_PORT=/dev/ttyACM0`
+   - **Config file:** Create `.copilot-buddy.local.json` in the repo root:
+     ```json
+     {
+       "serial_port": "COM7"
+     }
+     ```
+   - **Auto-detect:** If neither is set, the bridge probes the device with the status handshake and then falls back to USB description matching.
+3. Run Copilot CLI from within this repository — hooks load automatically from `.github/hooks/`.
+
+That's it. The pet reacts to Copilot CLI activity with no daemon running.
+
+### Hook events
+
+| Copilot CLI Event | Pet Reaction |
+|---|---|
+| `sessionStart` | Wake up (idle) |
+| `userPromptSubmitted` | Start working (busy) |
+| `preToolUse` / `postToolUse` | Stay busy, show tool name |
+| `postToolUseFailure` | Dizzy (error) |
+| `agentStop` | Done — heart (fast) or attention (normal) |
+| `errorOccurred` | Dizzy |
+| `sessionEnd` | Sleep |
+
+### Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `COPILOT_BUDDY_PORT` | *(auto-detect)* | Serial port (e.g., `COM7`, `/dev/ttyACM0`) |
+| `COPILOT_BUDDY_BAUD` | `115200` | Baud rate |
+| `COPILOT_BUDDY_DRY_RUN` | `false` | If `true`, log messages to stderr instead of sending |
+| `COPILOT_BUDDY_LOG_LEVEL` | `WARNING` | Log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
+
+### Debugging hooks
+
+Set `COPILOT_BUDDY_LOG_LEVEL=DEBUG` to see all hook events and serial traffic on stderr. Use `COPILOT_BUDDY_DRY_RUN=true` to test without hardware.
+
+## Daemon Mode
+
+The daemon mode monitors Copilot CLI activity by polling the process table. Use this if you need to support `gh copilot suggest/explain` (which doesn't use hooks) or want periodic heartbeats.
 
 ```bash
 # Auto-detect the ESP32 serial port

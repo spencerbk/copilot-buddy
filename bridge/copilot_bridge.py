@@ -19,6 +19,13 @@ import time
 from datetime import datetime
 
 from bridge.cli_watcher import CLIWatcher
+from bridge.constants import (
+    MAX_ENTRIES,
+    MAX_ENTRY_LEN,
+    STATE_BUSY,
+    STATE_IDLE,
+    STATE_SLEEP,
+)
 from bridge.transport_loopback import LoopbackTransport
 from bridge.transport_serial import SerialTransport
 from bridge.watcher import CopilotWatcher
@@ -29,8 +36,6 @@ log = logging.getLogger("copilot_bridge")
 _HEARTBEAT_INTERVAL = 2.0
 
 # HUD transcript ring buffer config.
-_MAX_ENTRIES = 5
-_MAX_ENTRY_LEN = 20  # 20 chars visible at scale=2 on 240px display
 _MAX_LINE_BYTES = 480  # leave headroom under 512-byte device limit
 
 
@@ -76,11 +81,11 @@ def _add_entry(query: str) -> None:
     ts = datetime.now().strftime("%H:%M")
     # Format: "repo HH:MM query" — budget chars for repo + space + time + space
     prefix = f"{repo} {ts} "
-    max_q = _MAX_ENTRY_LEN - len(prefix)
+    max_q = MAX_ENTRY_LEN - len(prefix)
     q = query[:max_q] if query else "?"
     entry = f"{prefix}{q}"
     _entries.insert(0, entry)
-    while len(_entries) > _MAX_ENTRIES:
+    while len(_entries) > MAX_ENTRIES:
         _entries.pop()
 
 
@@ -88,11 +93,11 @@ def _build_msg(state: str, connected: bool) -> str:
     """Build a one-line summary suitable for the HUD."""
     if not connected:
         return "No Copilot connected"
-    if state == "busy":
+    if state == STATE_BUSY:
         return "working..."
-    if state == "sleep":
+    if state == STATE_SLEEP:
         return "sleeping"
-    return "idle"
+    return STATE_IDLE
 
 
 # ------------------------------------------------------------------
@@ -182,7 +187,7 @@ def run(
                 hb_queries_today = watcher.queries_today
                 hb_total = watcher.total_queries
 
-            connected = hb_state != "sleep" or hb_total > 0
+            connected = hb_state != STATE_SLEEP or hb_total > 0
 
             heartbeat: dict = {
                 "state": hb_state,

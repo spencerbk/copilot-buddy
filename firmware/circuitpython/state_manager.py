@@ -85,6 +85,11 @@ class StateManager:
         if not isinstance(msg, dict):
             return self.state
 
+        # Any valid message resets the disconnect timer — allows hook-based
+        # bridges (which send events without periodic heartbeats) to keep
+        # the connection alive.
+        self._last_heartbeat = now
+
         if "evt" in msg:
             self._handle_event(msg, now)
         elif "state" in msg:

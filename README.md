@@ -70,9 +70,30 @@ Three firmware options are provided — pick one:
 4. Copy all files from `firmware/circuitpython/` to the `CIRCUITPY` drive
 5. **Hard reset** the board — `boot.py` takes effect on hard reset and disables the USB drive on ESP32-S2 (use safe mode to copy files afterward; see `firmware/circuitpython/README.md`)
 
-### 2. Run the host bridge
+### 2. Connect to Copilot CLI
 
-The bridge runs on your computer and sends events to the ESP32:
+Two options — pick one:
+
+#### Option A: Hook mode (recommended — no daemon needed)
+
+Uses the standalone Copilot CLI's native hook system. Use daemon mode instead
+if you want support for `gh copilot suggest` / `gh copilot explain`.
+
+```bash
+pip install -r bridge/requirements.txt
+```
+
+Configure the serial port (pick one method):
+- **Windows PowerShell:** `$env:COPILOT_BUDDY_PORT = "COM7"`
+- **Linux/macOS shell:** `export COPILOT_BUDDY_PORT=/dev/ttyACM0`
+- **Config file:** Create `.copilot-buddy.local.json` in the repo root: `{"serial_port": "COM7"}`
+- **Auto-detect:** Leave unconfigured and it will probe for the device, then fall back to USB description matching
+
+Then just use Copilot CLI from within this repo — hooks fire automatically.
+
+#### Option B: Daemon mode
+
+Run a long-lived bridge process that polls for Copilot CLI activity:
 
 ```bash
 cd bridge
@@ -85,11 +106,11 @@ The bridge auto-detects the ESP32 serial port. Use `--port COM3` (Windows) or `-
 ### 3. Use Copilot and watch your pet react!
 
 ```bash
-# Traditional gh extension
-gh copilot suggest "how to reverse a linked list"
-
-# Standalone CLI
+# Hook mode
 copilot --yolo --experimental
+
+# Daemon mode
+gh copilot suggest "how to reverse a linked list"
 ```
 
 Your desk pet will transition: idle → busy → attention → idle.
@@ -112,7 +133,7 @@ Your desk pet will transition: idle → busy → attention → idle.
 └──────────────────┘                        └──────────────────┘
 ```
 
-The bridge monitors Copilot CLI activity using two complementary methods: `psutil` process scanning for `gh copilot suggest/explain`, and file-based watching of `~/.copilot/` for per-turn detection in the standalone `copilot` CLI. It sends JSON heartbeats/events over USB serial. See [protocol/schema.md](protocol/schema.md) for the wire protocol.
+The bridge connects to the ESP32 using two modes: **hook mode** uses Copilot CLI's native `.github/hooks/` system for zero-daemon operation (each CLI event fires a short-lived Python process), while **daemon mode** polls for processes using `psutil` and file watching. Both send JSON heartbeats/events over USB serial. See [protocol/schema.md](protocol/schema.md) for the wire protocol.
 
 ---
 
@@ -120,8 +141,14 @@ The bridge monitors Copilot CLI activity using two complementary methods: `psuti
 
 ```
 copilot-buddy/
+├── .github/hooks/               # Copilot CLI hook integration
+│   ├── copilot-buddy.json       # Hook event registration
+│   ├── run-hook.ps1             # PowerShell wrapper
+│   └── run-hook.sh              # Bash wrapper
 ├── bridge/                      # Host-side bridge (CPython)
-│   ├── copilot_bridge.py        # Main bridge script
+│   ├── constants.py             # Shared protocol constants
+│   ├── copilot_bridge.py        # Daemon mode bridge script
+│   ├── hook_bridge/             # Hook mode bridge (no daemon)
 │   ├── watcher.py               # Process scanner (gh copilot)
 │   ├── cli_watcher.py           # File watcher (standalone copilot)
 │   ├── transport_serial.py      # USB serial transport

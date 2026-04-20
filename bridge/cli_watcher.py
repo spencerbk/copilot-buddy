@@ -20,10 +20,17 @@ import time
 from datetime import date
 from pathlib import Path
 
-log = logging.getLogger(__name__)
+from bridge.constants import (
+    EVT_END,
+    EVT_MILESTONE,
+    EVT_START,
+    MAX_QUERY_LEN,
+    MILESTONE_INTERVAL,
+    STATE_BUSY,
+    STATE_IDLE,
+)
 
-MAX_QUERY_LEN = 80
-"""Maximum query string length forwarded to the device (RAM-friendly)."""
+log = logging.getLogger(__name__)
 
 _DEFAULT_QUIESCENCE_SEC = 5.0
 """Seconds of silence on *all* ``events.jsonl`` files before we declare
@@ -57,7 +64,7 @@ class CLIWatcher:
 
         # Public state — mirrors CopilotWatcher's interface so the
         # bridge can read them the same way.
-        self.state: str = "idle"
+        self.state: str = STATE_IDLE
         self.query: str = ""
         self.queries_today: int = 0
         self.total_queries: int = 0
@@ -89,7 +96,7 @@ class CLIWatcher:
         """Check files for changes and return bridge-protocol events.
 
         Returns a list of event dicts:
-        - ``{"evt": "start", "query": "...", "mode": "chat"}``
+        - ``{"evt": "start", "query": "...", "mode": "chat"}`
         - ``{"evt": "end", "preview": ""}``
         - ``{"evt": "milestone", "n": 50}``
         """
@@ -112,8 +119,8 @@ class CLIWatcher:
             self._turn_active = True
             self._last_activity_mono = now
             self.query = new_query
-            self.state = "busy"
-            events.append({"evt": "start", "query": new_query, "mode": "chat"})
+            self.state = STATE_BUSY
+            events.append({"evt": EVT_START, "query": new_query, "mode": "chat"})
             log.info("CLI turn started: %s", new_query or "(empty query)")
 
         # 2) Check events.jsonl files for ongoing activity.
@@ -125,14 +132,14 @@ class CLIWatcher:
             silence = now - self._last_activity_mono
             if silence >= self.quiescence_sec:
                 self._turn_active = False
-                self.state = "idle"
+                self.state = STATE_IDLE
                 self.queries_today += 1
                 self.total_queries += 1
-                events.append({"evt": "end", "preview": ""})
+                events.append({"evt": EVT_END, "preview": ""})
                 log.info("CLI turn ended (%.1fs quiescence)", silence)
 
-                if self.queries_today > 0 and self.queries_today % 50 == 0:
-                    events.append({"evt": "milestone", "n": self.queries_today})
+                if self.queries_today > 0 and self.queries_today % MILESTONE_INTERVAL == 0:
+                    events.append({"evt": EVT_MILESTONE, "n": self.queries_today})
                     log.info("Milestone: %d queries today", self.queries_today)
 
         return events

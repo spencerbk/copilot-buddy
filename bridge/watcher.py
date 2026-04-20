@@ -18,10 +18,17 @@ from datetime import date
 
 import psutil
 
-log = logging.getLogger(__name__)
+from bridge.constants import (
+    EVT_END,
+    EVT_MILESTONE,
+    EVT_START,
+    MAX_QUERY_LEN,
+    MILESTONE_INTERVAL,
+    STATE_BUSY,
+    STATE_IDLE,
+)
 
-MAX_QUERY_LEN = 80
-"""Maximum query string length forwarded to the device (RAM-friendly)."""
+log = logging.getLogger(__name__)
 
 # Flags that consume the next argument (e.g. ``-t shell``).
 _FLAGS_WITH_VALUE = frozenset({"-t", "--target"})
@@ -103,7 +110,7 @@ class CopilotWatcher:
         self.poll_interval: float = poll_interval
 
         self.active_pids: dict[int, dict] = {}  # pid -> process info
-        self.state: str = "idle"
+        self.state: str = STATE_IDLE
 
         self.queries_today: int = 0
         self.total_queries: int = 0
@@ -130,7 +137,7 @@ class CopilotWatcher:
             if pid not in self.active_pids:
                 self._start_times[pid] = time.monotonic()
                 events.append(
-                    {"evt": "start", "query": info["query"], "mode": info["mode"]}
+                    {"evt": EVT_START, "query": info["query"], "mode": info["mode"]}
                 )
                 log.info(
                     "Copilot %s started (pid %d): %s",
@@ -143,7 +150,7 @@ class CopilotWatcher:
         ended_pids = set(self.active_pids) - current_pids
         for pid in ended_pids:
             duration = time.monotonic() - self._start_times.pop(pid, time.monotonic())
-            events.append({"evt": "end", "preview": ""})
+            events.append({"evt": EVT_END, "preview": ""})
 
             self.queries_today += 1
             self.total_queries += 1
@@ -154,13 +161,13 @@ class CopilotWatcher:
                 log.debug("Fast query (<3s) — heart state eligible")
 
             # Milestone every 50 queries.
-            if self.queries_today > 0 and self.queries_today % 50 == 0:
-                events.append({"evt": "milestone", "n": self.queries_today})
+            if self.queries_today > 0 and self.queries_today % MILESTONE_INTERVAL == 0:
+                events.append({"evt": EVT_MILESTONE, "n": self.queries_today})
                 log.info("Milestone reached: %d queries today", self.queries_today)
 
         # --- Update bookkeeping ------------------------------------
         self.active_pids = current_map
-        self.state = "busy" if current_pids else "idle"
+        self.state = STATE_BUSY if current_pids else STATE_IDLE
         return events
 
     # ------------------------------------------------------------------
