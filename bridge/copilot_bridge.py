@@ -15,6 +15,7 @@ import signal
 import sys
 import time
 
+from bridge.cli_watcher import CLIWatcher
 from bridge.transport_loopback import LoopbackTransport
 from bridge.transport_serial import SerialTransport
 from bridge.watcher import CopilotWatcher
@@ -58,6 +59,7 @@ def _send_event(
 def run(
     transport: SerialTransport | LoopbackTransport,
     watcher: CopilotWatcher,
+    cli_watcher: CLIWatcher | None = None,
 ) -> None:
     """Core poll/send loop.  Runs until interrupted."""
     last_heartbeat = 0.0
@@ -73,17 +75,44 @@ def run(
         for evt in events:
             _send_event(transport, evt)
 
+        # --- Poll CLI file watcher ---------------------------------
+        cli_events: list[dict] = []
+        if cli_watcher is not None:
+            try:
+                cli_events = cli_watcher.poll()
+            except Exception:
+                log.error("CLI watcher poll failed", exc_info=True)
+
+        for evt in cli_events:
+            _send_event(transport, evt)
+
         # --- Periodic heartbeat ------------------------------------
         now = time.monotonic()
         if now - last_heartbeat >= _HEARTBEAT_INTERVAL:
-            # Include the active query/mode so the device can display it.
-            active = next(iter(watcher.active_pids.values()), None)
+            # CLI watcher takes precedence when it has detected activity,
+            # providing per-turn granularity for the standalone CLI.
+            if cli_watcher is not None and (
+                cli_watcher._turn_active or cli_watcher.total_queries > 0
+            ):
+                hb_state = cli_watcher.state
+                hb_query = cli_watcher.query
+                hb_mode = "chat"
+                hb_queries_today = cli_watcher.queries_today + watcher.queries_today
+                hb_total = cli_watcher.total_queries + watcher.total_queries
+            else:
+                active = next(iter(watcher.active_pids.values()), None)
+                hb_state = watcher.state
+                hb_query = active["query"] if active else ""
+                hb_mode = active["mode"] if active else "suggest"
+                hb_queries_today = watcher.queries_today
+                hb_total = watcher.total_queries
+
             heartbeat = {
-                "state": watcher.state,
-                "query": active["query"] if active else "",
-                "mode": active["mode"] if active else "suggest",
-                "queries_today": watcher.queries_today,
-                "total_queries": watcher.total_queries,
+                "state": hb_state,
+                "query": hb_query,
+                "mode": hb_mode,
+                "queries_today": hb_queries_today,
+                "total_queries": hb_total,
                 "ts": int(time.time()),
             }
             _send_event(transport, heartbeat)
@@ -121,6 +150,11 @@ def main(argv: list[str] | None = None) -> None:
         help="Process scan interval in seconds (default: 1.0)",
     )
     parser.add_argument(
+        "--copilot-dir",
+        default=None,
+        help="Path to ~/.copilot directory (default: auto-detect)",
+    )
+    parser.add_argument(
         "--verbose", "-v", action="store_true", help="Enable debug logging"
     )
     args = parser.parse_args(argv)
@@ -139,18 +173,23 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(1)
     log.info("Transport ready (%s)", args.transport)
 
-    # --- Watcher ---------------------------------------------------
+    # --- Watchers --------------------------------------------------
     watcher = CopilotWatcher(poll_interval=args.poll_interval)
+    cli_watcher = CLIWatcher(copilot_dir=args.copilot_dir)
+    log.info("CLI file watcher enabled (dir: %s)", cli_watcher.copilot_dir)
 
     # --- Graceful shutdown -----------------------------------------
     def _shutdown(signum: int, _frame: object) -> None:
         sig_name = signal.Signals(signum).name
         log.info("Received %s — shutting down", sig_name)
         transport.disconnect()
+        total = watcher.queries_today + cli_watcher.queries_today
         log.info(
-            "Session summary: %d queries today, %d total",
+            "Session summary: %d queries today (%d process, %d CLI), %d total",
+            total,
             watcher.queries_today,
-            watcher.total_queries,
+            cli_watcher.queries_today,
+            watcher.total_queries + cli_watcher.total_queries,
         )
         sys.exit(0)
 
@@ -160,7 +199,7 @@ def main(argv: list[str] | None = None) -> None:
     # --- Run -------------------------------------------------------
     log.info("Bridge running — monitoring Copilot CLI activity")
     try:
-        run(transport, watcher)
+        run(transport, watcher, cli_watcher)
     except KeyboardInterrupt:
         _shutdown(signal.SIGINT, None)
 

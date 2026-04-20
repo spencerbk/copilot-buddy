@@ -172,6 +172,30 @@ QT Py (S2 or S3)           ILI9341 TFT Module
 
 ---
 
+## Adafruit QT Py ESP32-S2 / ESP32-S3 + EYESPI BFF + ILI9341 (240×320 TFT)
+
+Uses the Adafruit EYESPI BFF breakout with an 18-pin FPC cable to an EYESPI-compatible ILI9341 display. No loose wires for the SPI bus — CS and DC are routed through the BFF. Use board config `_qtpy_s2_eyespi_ili9341()` in config.py.
+
+```
+QT Py (S2 or S3)           EYESPI BFF           ILI9341 Display
+─────────────────          ──────────           ───────────────
+  SCK  (SPI default) ──────  SCK      ─── FPC ──  SCK / CLK
+  MOSI (SPI default) ──────  MOSI     ─── FPC ──  SDI / MOSI
+  TX                 ──────  TFT CS   ─── FPC ──  CS
+  RX                 ──────  TFT DC   ─── FPC ──  DC
+  (not connected)            RST      ─── FPC ──  RST  (solder pad on BFF)
+  (not connected)            LITE     ─── FPC ──  LED  (solder pad on BFF, default-on)
+  SDA / SCL (I2C)    ──────  SDA/SCL  ─── FPC ──  Touch I2C (if present)
+  3.3V               ──────  3V       ─── FPC ──  VCC
+  GND                ──────  GND      ─── FPC ──  GND
+
+  BOOT button        ──────  GPIO 0 (built-in, active low)
+```
+
+**Notes:** RST and backlight are exposed as through-hole solder pads on the BFF but are **not connected to any QT Py pin by default**. The ILI9341 breakout's backlight is on by default so no control pin is needed. If your display requires reset control, solder a jumper wire from the RST pad to a free GPIO and update config.py. Touch I2C (IRQ on A0, touch CS on A1) is wired by default but requires a touch driver — see ROADMAP.md.
+
+---
+
 ## General Tips
 
 - Always use **3.3V** logic — the ESP32-S2 and ESP32-S3 are not 5V tolerant

@@ -42,6 +42,7 @@ Six ASCII art pets included: **Octocat**, **Crab**, **Fox**, **Owl**, **Robot**,
 | **QT Py ESP32-S2 + SSD1306** | 128×64 OLED    | STEMMA QT plug-and-play, no BLE |
 | **QT Py ESP32-S2 + ST7789**  | 240×240 TFT    | Tiny board, SPI wiring, no BLE  |
 | **QT Py ESP32-S2 + ILI9341** | 240×320 TFT    | Tiny board, SPI wiring, no BLE  |
+| **QT Py ESP32-S2 + EYESPI BFF + ILI9341** | 240×320 TFT | Via EYESPI FPC cable, no loose wires, no BLE |
 | **QT Py ESP32-S3 + SSD1306** | 128×64 OLED    | STEMMA QT plug-and-play         |
 | **QT Py ESP32-S3 + ST7789**  | 240×240 TFT    | Tiny board, SPI wiring          |
 | **QT Py ESP32-S3 + ILI9341** | 240×320 TFT    | Tiny board, SPI wiring          |
@@ -67,7 +68,7 @@ Three firmware options are provided — pick one:
 2. Install libraries: `adafruit_st7789` (or your display driver), `adafruit_display_text`
 3. Edit `config.py` — uncomment your board
 4. Copy all files from `firmware/circuitpython/` to the `CIRCUITPY` drive
-5. **Hard reset** the board (boot.py only takes effect on hard reset)
+5. **Hard reset** the board — `boot.py` takes effect on hard reset and disables the USB drive on ESP32-S2 (use safe mode to copy files afterward; see `firmware/circuitpython/README.md`)
 
 ### 2. Run the host bridge
 
@@ -111,7 +112,7 @@ Your desk pet will transition: idle → busy → attention → idle.
 └──────────────────┘                        └──────────────────┘
 ```
 
-The bridge uses `psutil` to scan for Copilot CLI processes (`gh copilot` or standalone `copilot`) and sends JSON heartbeats/events over USB serial. See [protocol/schema.md](protocol/schema.md) for the wire protocol.
+The bridge monitors Copilot CLI activity using two complementary methods: `psutil` process scanning for `gh copilot suggest/explain`, and file-based watching of `~/.copilot/` for per-turn detection in the standalone `copilot` CLI. It sends JSON heartbeats/events over USB serial. See [protocol/schema.md](protocol/schema.md) for the wire protocol.
 
 ---
 
@@ -121,7 +122,8 @@ The bridge uses `psutil` to scan for Copilot CLI processes (`gh copilot` or stan
 copilot-buddy/
 ├── bridge/                      # Host-side bridge (CPython)
 │   ├── copilot_bridge.py        # Main bridge script
-│   ├── watcher.py               # Process scanner
+│   ├── watcher.py               # Process scanner (gh copilot)
+│   ├── cli_watcher.py           # File watcher (standalone copilot)
 │   ├── transport_serial.py      # USB serial transport
 │   └── tests/                   # pytest test suite
 ├── firmware/
@@ -146,7 +148,7 @@ copilot-buddy/
 - ✅ Persistent query stats across reboots
 - ✅ Screen auto-off after 30s idle, wake on activity
 - ✅ Button: short press cycles pets, long press shows stats
-- ✅ Works with 11 board/display combinations
+- ✅ Works with many board/display combinations (see table above)
 - ✅ Three firmware options (CircuitPython, MicroPython, Arduino)
 - ✅ Protocol test fixtures for development without hardware
 

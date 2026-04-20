@@ -29,7 +29,7 @@ Only install the display driver for your specific display.
 2. **Install libraries** — copy the required `.mpy` files to `CIRCUITPY/lib/`
 3. **Edit `config.py`** — uncomment the line matching your board:
    ```python
-   ACTIVE_BOARD = BOARD_DEVKIT_ST7789  # ← change this
+   ACTIVE_BOARD = _devkit_st7789()  # ← change this
    ```
 4. **Copy all files** from this directory to `CIRCUITPY/`:
    ```
@@ -54,9 +54,13 @@ Only install the display driver for your specific display.
    ```
 5. **Hard reset** the board (press reset button or power cycle)
 
-   > `boot.py` enables the USB CDC data port. It only runs on hard reset,
-   > not on soft reload (Ctrl+D). After the first flash, you **must**
-   > hard reset for serial communication to work.
+   > `boot.py` enables the USB CDC data port and disables USB HID, MIDI,
+   > and mass storage to fit within the ESP32-S2's USB endpoint budget.
+   > It only runs on hard reset, not on soft reload (Ctrl+D). After the
+   > first hard reset, you **must** use safe mode to update files (see
+   > below). ESP32-S3 boards have more USB endpoints and may not need
+   > the mass-storage disable — comment out `storage.disable_usb_drive()`
+   > in `boot.py` if you want the CIRCUITPY drive to remain visible.
 
 6. **Run the bridge** on your computer (see `bridge/README.md`)
 
@@ -66,12 +70,20 @@ Only install the display driver for your specific display.
 `boot.py` hasn't taken effect yet. Hard reset the board (press the physical reset button).
 
 ### Display shows nothing
+- Run `test_display.py` from the REPL to verify SPI + display wiring in isolation
 - Check wiring against [docs/wiring.md](../../docs/wiring.md)
 - Verify the correct display library is installed in `CIRCUITPY/lib/`
 - Check `config.py` has the right board selected
+- If the screen is white, the display may need an explicit background (see `pet_renderer.py`)
 
-### Safe mode recovery
-If `boot.py` causes issues, hold the **BOOT** button during reset to enter safe mode. Then delete or rename `boot.py` from the CIRCUITPY drive.
+### Safe mode / updating files after boot.py
+`boot.py` disables the CIRCUITPY USB drive to free USB endpoints. To copy updated files:
+1. Hold **BOOT** during reset to enter safe mode
+2. The CIRCUITPY drive reappears
+3. Copy your files
+4. Press reset again to exit safe mode and run normally
+
+If `boot.py` itself is causing problems, delete or rename it while in safe mode.
 
 ### Serial port not detected by bridge
 - The board exposes **two** serial ports: Console (REPL) and Data

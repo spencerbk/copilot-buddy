@@ -44,7 +44,7 @@ class SerialBridge:
             if chunk:
                 self._buf.extend(chunk)
 
-        nl = self._buf.find(ord("\n"))
+        nl = self._buf.find(b"\n")
         if nl < 0:
             # No complete line yet; guard against runaway buffer
             if len(self._buf) > self._max_line:

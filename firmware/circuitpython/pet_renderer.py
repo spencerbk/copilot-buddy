@@ -8,9 +8,9 @@ import displayio
 import terminalio
 from adafruit_display_text import label
 
-# Label indices within the pet group
-_PET_LABEL = 0
-_STATUS_LABEL = 1
+# Label indices within the pet group (index 0 is background)
+_PET_LABEL = 1
+_STATUS_LABEL = 2
 
 # Built-in font character size (terminalio.FONT is 6x12 pixels)
 _FONT_W = 6
@@ -27,12 +27,20 @@ def create_pet_group(display, config):
         config: Board config dict with 'width' and 'height'.
 
     Returns:
-        displayio.Group containing pet art and status text labels.
+        displayio.Group containing background, pet art, and status labels.
     """
-    w = config["width"]
-    h = config["height"]
+    # Use display dimensions (accounts for rotation)
+    w = display.width
+    h = display.height
 
     group = displayio.Group()
+
+    # Solid black background — required for TFT displays that default
+    # to white after init (e.g. ILI9341 via EYESPI BFF with no reset).
+    bg_bitmap = displayio.Bitmap(w, h, 1)
+    bg_palette = displayio.Palette(1)
+    bg_palette[0] = 0x000000
+    group.append(displayio.TileGrid(bg_bitmap, pixel_shader=bg_palette))
 
     # Estimate pet art size for centering (typical: ~14 chars wide, 4 lines)
     est_art_w = 14 * _FONT_W

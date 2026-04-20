@@ -31,7 +31,7 @@ alive and can update its display without polling.
 |-----------------|--------|----------|-----------------------------------------------------|
 | `state`         | string | yes      | One of `sleep`, `idle`, `busy`, `done`, `error`     |
 | `query`         | string | yes      | Current or most recent query text (may be `""`)     |
-| `mode`          | string | yes      | `"suggest"` or `"explain"`                          |
+| `mode`          | string | yes      | `"suggest"`, `"explain"`, or `"chat"`               |
 | `queries_today` | int    | yes      | Queries since local midnight (reset by bridge)      |
 | `total_queries` | int    | yes      | Cumulative all-time query count                     |
 | `ts`            | int    | yes      | Unix epoch seconds — authoritative clock for device |
@@ -70,7 +70,7 @@ animation and then return to the heartbeat-driven state.
 |---------|--------|----------|------------------------|
 | `evt`   | string | yes      | Always `"start"`       |
 | `query` | string | yes      | The query text         |
-| `mode`  | string | yes      | `"suggest"` or `"explain"` |
+| `mode`  | string | yes      | `"suggest"`, `"explain"`, or `"chat"` |
 
 #### `end` — query completed
 
@@ -162,3 +162,11 @@ Sent in reply to `{"cmd":"status"}`.
 4. **Error budget:** The device silently drops unparseable lines and
    increments `stats.parse_errors`. The bridge can read this via the
    `status` command.
+
+5. **Standalone CLI detection:** The bridge watches files under
+   `~/.copilot/` to detect per-turn activity in the standalone
+   `copilot` CLI. `command-history-state.json` modifications signal
+   turn starts (with query text); `session-state/*/events.jsonl`
+   quiescence signals turn ends. These turns use `mode: "chat"`.
+   This supplements the process-lifecycle detection used for
+   `gh copilot suggest/explain`.
