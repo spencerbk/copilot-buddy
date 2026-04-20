@@ -6,9 +6,11 @@ Reuses label objects to minimize memory allocations.
 Group layout (stable indices):
   0 — solid background (black for TFT displays)
   1 — pet art label (ASCII frames)
-  2 — HUD line 1 (newest entry, bright white)
-  3 — HUD line 2 (older entry, dimmed gray)
-  4 — HUD line 3 (oldest visible, dimmed gray)
+  2 — HUD line 1 (newest entry, bright white, scale 2×)
+  3 — HUD line 2
+  4 — HUD line 3
+  5 — HUD line 4
+  6 — HUD line 5 (oldest visible, dimmed gray)
 """
 
 import displayio
@@ -20,14 +22,18 @@ _PET_LABEL = 1
 _HUD_LINE_1 = 2
 _HUD_LINE_2 = 3
 _HUD_LINE_3 = 4
+_HUD_LINE_4 = 5
+_HUD_LINE_5 = 6
 
 # Built-in font character size (terminalio.FONT is 6x12 pixels)
 _FONT_W = 6
 _FONT_H = 12
 
 # HUD area config
-_HUD_LINES = 3
-_HUD_AREA_H = _HUD_LINES * _FONT_H + 8  # 44px total
+_HUD_LINES = 5
+_HUD_FONT_SCALE = 2
+_SCALED_FONT_H = _FONT_H * _HUD_FONT_SCALE  # 24px per line
+_HUD_AREA_H = _HUD_LINES * _SCALED_FONT_H + 10  # 130px total
 _HUD_COLOR_BRIGHT = 0xFFFFFF
 _HUD_COLOR_DIM = 0x888888
 
@@ -73,9 +79,9 @@ def create_pet_group(display, config):
     )
     group.append(pet_label)
 
-    # 2-4: HUD lines (bottom of screen)
-    hud_x = 4
-    hud_base_y = h - _HUD_AREA_H + _FONT_H // 2 + 2
+    # 2-6: HUD lines (bottom of screen, scale 2× for readability)
+    hud_x = 2
+    hud_base_y = h - _HUD_AREA_H + _SCALED_FONT_H // 2 + 2
 
     for i in range(_HUD_LINES):
         color = _HUD_COLOR_BRIGHT if i == 0 else _HUD_COLOR_DIM
@@ -84,8 +90,9 @@ def create_pet_group(display, config):
             text="",
             color=color,
             x=hud_x,
-            y=hud_base_y + i * _FONT_H,
+            y=hud_base_y + i * _SCALED_FONT_H,
         )
+        hud_label.scale = _HUD_FONT_SCALE
         group.append(hud_label)
 
     return group
@@ -116,8 +123,8 @@ def render_hud(group, entries, msg, scroll_offset=0):
         # No entries — show summary message
         group[_HUD_LINE_1].text = msg
         group[_HUD_LINE_1].color = _HUD_COLOR_DIM
-        group[_HUD_LINE_2].text = ""
-        group[_HUD_LINE_3].text = ""
+        for j in range(1, _HUD_LINES):
+            group[_HUD_LINE_1 + j].text = ""
         return
 
     n = len(entries)
@@ -136,13 +143,13 @@ def render_hud(group, entries, msg, scroll_offset=0):
         else:
             hud_label.text = ""
 
-    # Scroll indicator on line 3 when scrolled
+    # Scroll indicator on last line when scrolled
     if scroll_offset > 0:
-        existing = group[_HUD_LINE_3].text
+        last = group[_HUD_LINE_1 + _HUD_LINES - 1]
+        existing = last.text
         if existing:
-            # Truncate to make room for indicator
-            max_w = 34
-            group[_HUD_LINE_3].text = existing[:max_w - 3] + " -" + str(scroll_offset)
+            max_w = 20
+            last.text = existing[:max_w - 3] + " -" + str(scroll_offset)
 
 
 def render_stats_screen(group, pet_name, queries_today, total_queries,
@@ -187,9 +194,8 @@ def render_stats_screen(group, pet_name, queries_today, total_queries,
 
     group[_PET_LABEL].text = text
     # Clear HUD lines during stats display
-    group[_HUD_LINE_1].text = ""
-    group[_HUD_LINE_2].text = ""
-    group[_HUD_LINE_3].text = ""
+    for j in range(_HUD_LINES):
+        group[_HUD_LINE_1 + j].text = ""
 
 
 def clear_display(display):

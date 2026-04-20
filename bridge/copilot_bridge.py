@@ -11,7 +11,9 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import signal
+import subprocess
 import sys
 import time
 from datetime import datetime
@@ -28,8 +30,37 @@ _HEARTBEAT_INTERVAL = 2.0
 
 # HUD transcript ring buffer config.
 _MAX_ENTRIES = 5
-_MAX_ENTRY_LEN = 34
+_MAX_ENTRY_LEN = 20  # 20 chars visible at scale=2 on 240px display
 _MAX_LINE_BYTES = 480  # leave headroom under 512-byte device limit
+
+
+# ------------------------------------------------------------------
+# Repo name detection
+# ------------------------------------------------------------------
+
+def _detect_repo_name() -> str:
+    """Detect the current git repo name, falling back to CWD basename."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True, text=True, timeout=5,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return os.path.basename(result.stdout.strip())
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    return os.path.basename(os.getcwd())
+
+
+_repo_name: str = ""
+
+
+def _get_repo_name() -> str:
+    """Return cached repo name (detected lazily on first call)."""
+    global _repo_name  # noqa: PLW0603
+    if not _repo_name:
+        _repo_name = _detect_repo_name()
+    return _repo_name
 
 
 # ------------------------------------------------------------------
@@ -40,12 +71,14 @@ _entries: list[str] = []
 
 
 def _add_entry(query: str) -> None:
-    """Prepend a timestamped query to the entries ring buffer."""
+    """Prepend a repo-prefixed, timestamped query to the entries ring buffer."""
+    repo = _get_repo_name()[:6]  # truncate repo name to 6 chars
     ts = datetime.now().strftime("%H:%M")
-    # 6 chars for "HH:MM ", remainder for query
-    max_q = _MAX_ENTRY_LEN - len(ts) - 1
-    q = query[:max_q] if query else "(no query)"
-    entry = f"{ts} {q}"
+    # Format: "repo HH:MM query" — budget chars for repo + space + time + space
+    prefix = f"{repo} {ts} "
+    max_q = _MAX_ENTRY_LEN - len(prefix)
+    q = query[:max_q] if query else "?"
+    entry = f"{prefix}{q}"
     _entries.insert(0, entry)
     while len(_entries) > _MAX_ENTRIES:
         _entries.pop()

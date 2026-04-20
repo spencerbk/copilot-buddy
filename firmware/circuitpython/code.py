@@ -194,7 +194,7 @@ def main():
                 # Scroll HUD transcript
                 if sm.entries:
                     hud_scroll += 1
-                    max_scroll = max(0, len(sm.entries) - 3)
+                    max_scroll = max(0, len(sm.entries) - 5)
                     if hud_scroll > max_scroll:
                         # Past end of entries → show stats
                         stats_mode = True

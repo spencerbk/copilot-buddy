@@ -87,6 +87,10 @@ class SerialTransport:
                 with serial.Serial(
                     port=device, baudrate=self._baud, timeout=2, write_timeout=2
                 ) as probe:
+                    # USB CDC needs a moment after port open before data flows
+                    time.sleep(0.3)
+                    # Drain any stale bytes sitting in the buffer
+                    probe.reset_input_buffer()
                     probe.write(b'{"cmd":"status"}\n')
                     probe.flush()
                     raw = probe.readline()

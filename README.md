@@ -147,7 +147,7 @@ copilot-buddy/
 - ✅ Real-time Copilot CLI activity detection
 - ✅ Persistent query stats across reboots
 - ✅ Screen auto-off after 30s idle, wake on activity
-- ✅ HUD transcript: 3-line activity log at the bottom of the display
+- ✅ HUD transcript: 5-line activity log at the bottom of the display (repo + HH:MM + query)
 - ✅ Button: short press scrolls transcript, long press cycles pets
 - ✅ Works with many board/display combinations (see table above)
 - ✅ Three firmware options (CircuitPython, MicroPython, Arduino)

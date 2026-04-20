@@ -48,12 +48,12 @@ class SerialBridge:
         if nl < 0:
             # No complete line yet; guard against runaway buffer
             if len(self._buf) > self._max_line:
-                del self._buf[:]
+                self._buf = bytearray()
             return None
 
         # Extract line up to newline, keep remainder in _buf
         line_bytes = bytes(self._buf[:nl])
-        del self._buf[: nl + 1]
+        self._buf = self._buf[nl + 1:]
 
         return self._process_line(line_bytes)
 
