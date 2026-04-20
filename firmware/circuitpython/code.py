@@ -22,6 +22,7 @@ from state_manager import (
     StateManager,
 )
 from stats import Stats
+from touch_input import TouchInput
 
 # ── Pet roster ──────────────────────────────────────────────────
 PET_NAMES = ["octocat", "crab", "fox", "owl", "robot", "ghost"]
@@ -130,8 +131,9 @@ def main():
     animator = PetAnimator(group, pet, fps=2)
     animator.set_state(sm.state)
 
-    # ── Button, stats, screen power ─────────────────────────
+    # ── Button, touch, stats, screen power ─────────────────────
     btn = Button(ACTIVE_BOARD)
+    touch = TouchInput(ACTIVE_BOARD)
     stats = Stats()
     stats_mode = False
     screen_on = True
@@ -177,8 +179,8 @@ def main():
         # 3. Tick state manager (timed expiry, disconnect check)
         cur = sm.update(now)
 
-        # 4. Button handling
-        btn_event = btn.update(now)
+        # 4. Button / touch handling
+        btn_event = btn.update(now) or touch.update(now)
         if btn_event is not None:
             # Any button press wakes the screen
             if not screen_on:

@@ -65,7 +65,7 @@ Three firmware options are provided — pick one:
 
 **CircuitPython setup:**
 1. Install [CircuitPython 10.x](https://circuitpython.org/downloads) on your ESP32-S2 or ESP32-S3
-2. Install libraries: `adafruit_st7789` (or your display driver), `adafruit_display_text`
+2. Install libraries: `adafruit_st7789` (or your display driver), `adafruit_display_text` — plus `adafruit_focaltouch` and `adafruit_bus_device` if your display has capacitive touch
 3. Edit `config.py` — uncomment your board
 4. Copy all files from `firmware/circuitpython/` to the `CIRCUITPY` drive
 5. **Hard reset** the board — `boot.py` takes effect on hard reset and disables the USB drive on ESP32-S2 (use safe mode to copy files afterward; see `firmware/circuitpython/README.md`)
@@ -149,6 +149,7 @@ copilot-buddy/
 - ✅ Screen auto-off after 30s idle, wake on activity
 - ✅ HUD transcript: 5-line activity log at the bottom of the display (repo + HH:MM + query)
 - ✅ Button: short press scrolls transcript, long press cycles pets
+- ✅ Capacitive touch: tap scrolls HUD, horizontal swipe cycles pets (FT6206, optional)
 - ✅ Works with many board/display combinations (see table above)
 - ✅ Three firmware options (CircuitPython, MicroPython, Arduino)
 - ✅ Protocol test fixtures for development without hardware

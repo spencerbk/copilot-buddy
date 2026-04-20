@@ -2,16 +2,40 @@
 
 ## Planned
 
-### Capacitive touch input support
-
-Add an I2C capacitive-touch driver (FT6206 / FT6236) for the Adafruit 2.8"
-TFT ILI9341 breakout. The touch controller can connect over the STEMMA QT
-connector on the QT Py ESP32-S2. The EYESPI BFF exposes the touch IRQ pin
-on A0 and touch CS on A1. This would replace or supplement the current
-single-button input with tap and swipe gestures for cycling pets, opening
-stats, and other interactions.
+*(Nothing currently — suggest new features via issues.)*
 
 ## Done
+
+### Capacitive touch input support
+
+Added `touch_input.py` — a `TouchInput` class that drives the FT6206/FT6236
+capacitive touch controller via STEMMA QT I2C. Gesture detection maps tap to
+`"short_press"` (scroll HUD) and horizontal swipe to `"long_press"` (cycle
+pet). Raw touch coordinates are mapped to logical display coordinates
+accounting for display rotation. Gracefully degrades if the touch controller
+is not present. Added `touch_i2c_addr`, `touch_sda`, `touch_scl` to the
+EYESPI BFF board config. Requires `adafruit_focaltouch` and
+`adafruit_bus_device` from the Adafruit CircuitPython Bundle.
+
+### HUD transcript with repo-prefixed activity log
+
+Implemented a claude-desktop-buddy-style HUD transcript at the bottom of the
+display. Shows 5 lines of recent Copilot activity, each formatted as
+`"repo HH:MM query"`. Font rendered at 2× scale for readability on the
+ILI9341. Newest entry is bright white; older entries dimmed gray. Scrollable
+via button short-press. Bridge builds entries from both the process watcher
+and the CLI file watcher.
+
+### Serial & transport fixes
+
+- Fixed `serial_bridge.py` `bytearray.find()` to use `b"\n"` instead of
+  `ord("\n")` (CircuitPython TypeError).
+- Fixed `serial_bridge.py` bytearray slice deletion — CircuitPython doesn't
+  support `del buf[start:stop]`; replaced with reassignment.
+- Fixed `transport_serial.py` auto-detect: added 300 ms USB CDC settle delay
+  and `reset_input_buffer()` after opening port for reliable handshake.
+- Fixed `boot.py` USB endpoint overflow: disabled HID, MIDI, and USB storage
+  before enabling dual CDC (`console=True, data=True`).
 
 ### Standalone CLI per-turn detection
 

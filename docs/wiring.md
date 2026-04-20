@@ -192,7 +192,7 @@ QT Py (S2 or S3)           EYESPI BFF           ILI9341 Display
   BOOT button        ──────  GPIO 0 (built-in, active low)
 ```
 
-**Notes:** RST and backlight are exposed as through-hole solder pads on the BFF but are **not connected to any QT Py pin by default**. The ILI9341 breakout's backlight is on by default so no control pin is needed. If your display requires reset control, solder a jumper wire from the RST pad to a free GPIO and update config.py. Touch I2C (IRQ on A0, touch CS on A1) is wired by default but requires a touch driver — see ROADMAP.md.
+**Notes:** RST and backlight are exposed as through-hole solder pads on the BFF but are **not connected to any QT Py pin by default**. The ILI9341 breakout's backlight is on by default so no control pin is needed. If your display requires reset control, solder a jumper wire from the RST pad to a free GPIO and update config.py. Touch I2C (FT6206 at address 0x38) uses the STEMMA QT connector — install `adafruit_focaltouch` and `adafruit_bus_device` from the Adafruit Bundle. The `touch_input.py` driver is loaded automatically when `touch_i2c_addr` is set in the board config.
 
 ---
 

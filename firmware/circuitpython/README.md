@@ -20,8 +20,12 @@ Install these to the `CIRCUITPY/lib/` folder. Download from the
 | `adafruit_st7789` | ST7789 TFT displays |
 | `adafruit_ili9341` | ILI9341 TFT displays (if using) |
 | `adafruit_ssd1306` | SSD1306 OLED displays (if using) |
+| `adafruit_focaltouch` | FT6206/FT6236 capacitive touch (if using) |
+| `adafruit_bus_device` | I2C abstraction for touch driver (if using touch) |
 
-Only install the display driver for your specific display.
+Only install the display driver for your specific display. Touch libraries
+are only needed if your display has a capacitive touch controller (e.g.,
+Adafruit 2.8" TFT ILI9341 with cap touch).
 
 ## Setup
 
@@ -43,6 +47,7 @@ Only install the display driver for your specific display.
    ├── pet_renderer.py
    ├── stats.py
    ├── button.py
+   ├── touch_input.py
    └── pets/
        ├── __init__.py
        ├── octocat.py
