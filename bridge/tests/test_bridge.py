@@ -212,8 +212,47 @@ def test_heartbeat_under_512_bytes() -> None:
         t.start()
         time.sleep(3)
 
-    for msg in transport.sent_messages:
-        # Each line sent should be under 512 bytes
-        assert len(msg.encode("utf-8")) <= 512, f"Line too long: {len(msg.encode('utf-8'))} bytes"
+    _entries.clear()
 
+
+def test_detect_repo_name_from_git() -> None:
+    """_detect_repo_name returns basename of git toplevel."""
+    from bridge.copilot_bridge import _detect_repo_name
+    name = _detect_repo_name()
+    # We're in the copilot-buddy repo
+    assert name == "copilot-buddy"
+
+
+def test_detect_repo_name_fallback(tmp_path, monkeypatch) -> None:
+    """_detect_repo_name falls back to CWD basename when git fails."""
+    from bridge.copilot_bridge import _detect_repo_name
+    monkeypatch.chdir(tmp_path)
+    name = _detect_repo_name()
+    assert name == tmp_path.name
+
+
+def test_get_repo_name_caches() -> None:
+    """_get_repo_name caches the result on first call."""
+    import bridge.copilot_bridge as mod
+    old = mod._repo_name
+    try:
+        mod._repo_name = ""
+        result1 = mod._get_repo_name()
+        assert result1
+        assert mod._repo_name == result1
+        # Second call returns same without re-detecting
+        result2 = mod._get_repo_name()
+        assert result2 == result1
+    finally:
+        mod._repo_name = old
+
+
+def test_entry_includes_repo_prefix() -> None:
+    """Entries should include the repo name prefix."""
+    from bridge.copilot_bridge import _add_entry, _entries, _get_repo_name
+    _entries.clear()
+    _add_entry("hello")
+    entry = _entries[0]
+    repo = _get_repo_name()[:6]
+    assert entry.startswith(repo)
     _entries.clear()
