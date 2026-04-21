@@ -13,12 +13,29 @@ The bridge connects your computer to the ESP32 desk-pet, streaming real-time Cop
 - **OS:** Windows (primary target), macOS and Linux also supported
 - **Hardware:** ESP32 desk-pet connected via USB (not needed for testing)
 
+> **Convention:** All commands below assume you are in the **repository root** (`copilot-buddy/`) with the virtual environment activated.
+
 ## Installation
 
-```bash
-cd bridge
-pip install -r requirements.txt
+Create a virtual environment at the repository root and install dependencies:
+
+**Windows (PowerShell):**
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install -r bridge\requirements.txt
 ```
+
+**macOS / Linux:**
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r bridge/requirements.txt
+```
+
+Activate the virtual environment (`Activate.ps1` or `source .venv/bin/activate`) each time you open a new terminal before running bridge, daemon, or test commands.
 
 ## Hook Mode (recommended)
 
@@ -37,9 +54,11 @@ Uses the standalone Copilot CLI's `.github/hooks/` system — no background scri
      }
      ```
    - **Auto-detect:** If neither is set, the bridge tries USB VID matching (Adafruit / Espressif), then falls back to a status-handshake probe, then USB description matching.
-3. Run Copilot CLI from within this repository — hooks load automatically from `.github/hooks/`.
+3. Run Copilot CLI from within this repository (or a subdirectory) — hooks load automatically from `.github/hooks/`.
 
 That's it. The pet reacts to Copilot CLI activity with no daemon running.
+
+> **Note on hooks and Python:** The hook scripts (`.github/hooks/run-hook.ps1` / `run-hook.sh`) resolve Python at runtime using `py -3`, `python3`, or `python` from your `PATH`. This may not be the same Python as your repo virtual environment. If hooks fail to send serial data, ensure `pyserial` is installed in whichever Python the hook script finds, or update the hook script to point to your venv's Python.
 
 ### Hook events
 
@@ -105,8 +124,10 @@ python -m bridge.copilot_bridge --transport loopback
 
 ## Running tests
 
+From the repository root with the virtual environment activated:
+
 ```bash
-pip install pytest
+python -m pip install pytest
 python -m pytest bridge/tests/ -v
 ```
 

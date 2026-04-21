@@ -79,8 +79,16 @@ Two options — pick one:
 Uses the standalone Copilot CLI's native hook system. Use daemon mode instead
 if you want support for `gh copilot suggest` / `gh copilot explain`.
 
+From the repository root:
+
 ```bash
-pip install -r bridge/requirements.txt
+python -m venv .venv            # one-time setup
+# Windows PowerShell:
+.venv\Scripts\Activate.ps1
+# macOS / Linux:
+# source .venv/bin/activate
+
+python -m pip install -r bridge/requirements.txt
 ```
 
 Configure the serial port (pick one method):
@@ -89,15 +97,23 @@ Configure the serial port (pick one method):
 - **Config file:** Create `.copilot-buddy.local.json` in the repo root: `{"serial_port": "COM7"}`
 - **Auto-detect:** Leave unconfigured — the bridge tries USB VID matching first, then a handshake probe, then USB description matching
 
-Then just use Copilot CLI from within this repo — hooks fire automatically.
+Then just use Copilot CLI from within this repo (or a subdirectory) — hooks fire automatically.
+
+> **Note:** The hook scripts resolve Python at runtime via `py -3` / `python3` / `python` from `PATH`, which may not be your virtual environment's Python. If hooks cannot find `pyserial`, either install it in the Python that hooks resolve, or update the hook script to use your venv interpreter.
 
 #### Option B: Daemon mode
 
-Run a long-lived bridge process that polls for Copilot CLI activity:
+Run a long-lived bridge process that polls for Copilot CLI activity.
+All commands are run from the **repository root** with the virtual environment activated:
 
 ```bash
-cd bridge
-pip install -r requirements.txt
+python -m venv .venv            # one-time setup (skip if already created)
+# Windows PowerShell:
+.venv\Scripts\Activate.ps1
+# macOS / Linux:
+# source .venv/bin/activate
+
+python -m pip install -r bridge/requirements.txt
 python -m bridge.copilot_bridge
 ```
 
@@ -185,19 +201,27 @@ copilot-buddy/
 
 ## Development
 
+All commands below assume you are in the **repository root** with the virtual environment activated.
+
 ### Bridge tests
 ```bash
-pip install -r bridge/requirements.txt
-pip install pytest
+python -m pip install -r bridge/requirements.txt
+python -m pip install pytest
 python -m pytest bridge/tests/ -v
 ```
 
 ### Protocol replay (test firmware without the bridge)
+
+Requires `pyserial` (already in `bridge/requirements.txt`):
+
 ```bash
 python protocol/replay.py protocol/fixtures/full_session.jsonl --port COM3
 ```
 
 ### Linting
+
+Requires `ruff` (`python -m pip install ruff`):
+
 ```bash
 python -m ruff check bridge/ protocol/ firmware/circuitpython/ firmware/micropython/
 ```
