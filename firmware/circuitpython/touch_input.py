@@ -1,8 +1,8 @@
 """Capacitive touch input for copilot-buddy.
 
 Drives the FT6206/FT6236 touch controller found on the Adafruit 2.8" TFT
-ILI9341 capacitive-touch breakout.  Connected via STEMMA QT I2C on the
-QT Py ESP32-S2.
+ILI9341 capacitive-touch breakout.  When using the EYESPI BFF, the touch
+I2C is routed through the QT Py header I2C (SDA/SCL), not STEMMA QT.
 
 Provides the same event interface as ``Button``:
     ``update(now)`` → ``"short_press"`` / ``"long_press"`` / ``None``
@@ -47,14 +47,23 @@ class TouchInput:
         try:
             import adafruit_focaltouch  # noqa: PLC0415
 
-            # Prefer board.STEMMA_I2C() — the Adafruit-recommended singleton
-            # for STEMMA QT I2C devices.  Falls back to raw busio.I2C() for
-            # non-Adafruit boards or when STEMMA_I2C is unavailable.
+            # Try board-level I2C singletons before creating a raw bus.
+            # STEMMA_I2C covers the STEMMA QT connector; I2C covers
+            # header I2C (e.g. EYESPI BFF routes CTP through header I2C).
+            # Falls back to raw busio.I2C() for non-Adafruit boards.
             i2c = None
             try:
                 import board as _board  # noqa: PLC0415
-                i2c = _board.STEMMA_I2C()
-            except (ImportError, AttributeError, RuntimeError, ValueError):
+                for _attr in ("STEMMA_I2C", "I2C"):
+                    _factory = getattr(_board, _attr, None)
+                    if _factory is None:
+                        continue
+                    try:
+                        i2c = _factory()
+                        break
+                    except (RuntimeError, ValueError):
+                        pass
+            except (ImportError, AttributeError):
                 pass
             if i2c is None:
                 i2c = busio.I2C(scl_pin, sda_pin)

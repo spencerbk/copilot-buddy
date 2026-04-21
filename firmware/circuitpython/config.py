@@ -246,10 +246,12 @@ def _qtpy_s2_eyespi_ili9341():
         # Built-in BOOT button (active low)
         "button_pin": board.BUTTON,
         "button_active_low": True,
-        # Capacitive touch (FT6206) via STEMMA QT I2C
+        # Capacitive touch (FT6206) via EYESPI BFF header I2C
+        # (The BFF routes CTP_SDA/CTP_SCL to the QT Py header I2C,
+        # NOT the STEMMA QT connector — they are separate buses.)
         "touch_i2c_addr": 0x38,
-        "touch_sda": board.SDA1,
-        "touch_scl": board.SCL1,
+        "touch_sda": board.SDA,
+        "touch_scl": board.SCL,
     }
 
 
