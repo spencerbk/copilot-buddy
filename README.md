@@ -70,44 +70,14 @@ Three firmware options are provided — pick one:
 4. Copy all files from `firmware/circuitpython/` to the `CIRCUITPY` drive
 5. **Hard reset** the board — `boot.py` takes effect on hard reset and disables the USB drive on ESP32-S2 (use safe mode to copy files afterward; see `firmware/circuitpython/README.md`)
 
-### 2. Connect to Copilot CLI
+### 2. Start the bridge daemon
 
-Two options — pick one:
+The bridge runs in the background and detects Copilot CLI activity across **all your repos and terminal sessions** — no per-repo setup needed.
 
-#### Option A: Hook mode (recommended — no daemon needed)
-
-Uses the standalone Copilot CLI's native hook system. Use daemon mode instead
-if you want support for `gh copilot suggest` / `gh copilot explain`.
-
-From the repository root:
+From the `copilot-buddy` repository root:
 
 ```bash
 python -m venv .venv            # one-time setup
-# Windows PowerShell:
-.venv\Scripts\Activate.ps1
-# macOS / Linux:
-# source .venv/bin/activate
-
-python -m pip install -r bridge/requirements.txt
-```
-
-Configure the serial port (pick one method):
-- **Windows PowerShell:** `$env:COPILOT_BUDDY_PORT = "COM7"`
-- **Linux/macOS shell:** `export COPILOT_BUDDY_PORT=/dev/ttyACM0`
-- **Config file:** Create `.copilot-buddy.local.json` in the repo root: `{"serial_port": "COM7"}`
-- **Auto-detect:** Leave unconfigured — the bridge tries USB VID matching first, then a handshake probe, then USB description matching
-
-Then just use Copilot CLI from within this repo (or a subdirectory) — hooks fire automatically.
-
-> **Note:** The hook scripts resolve Python at runtime via `py -3` / `python3` / `python` from `PATH`, which may not be your virtual environment's Python. If hooks cannot find `pyserial`, either install it in the Python that hooks resolve, or update the hook script to use your venv interpreter.
-
-#### Option B: Daemon mode
-
-Run a long-lived bridge process that polls for Copilot CLI activity.
-All commands are run from the **repository root** with the virtual environment activated:
-
-```bash
-python -m venv .venv            # one-time setup (skip if already created)
 # Windows PowerShell:
 .venv\Scripts\Activate.ps1
 # macOS / Linux:
@@ -119,17 +89,19 @@ python -m bridge.copilot_bridge
 
 The bridge auto-detects the ESP32 serial port. Use `--port COM3` (Windows) or `--port /dev/ttyACM0` (Linux) to specify manually.
 
-### 3. Use Copilot and watch your pet react!
+### 3. Use Copilot anywhere and watch your pet react!
+
+Open any repo in a separate terminal and use Copilot CLI as you normally would:
 
 ```bash
-# Hook mode
-copilot --yolo --experimental
-
-# Daemon mode
+cd ~/my-other-project
+copilot "refactor the auth module"
 gh copilot suggest "how to reverse a linked list"
 ```
 
 Your desk pet will transition: idle → busy → attention → idle.
+
+> **Advanced: Hook mode** — If you use the standalone Copilot CLI inside the `copilot-buddy` repo itself, the `.github/hooks/` scripts provide richer event detail (tool names, error types) without the daemon. See [bridge/README.md](bridge/README.md) for details.
 
 ---
 

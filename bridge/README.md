@@ -1,11 +1,11 @@
 # copilot-buddy Bridge
 
-The bridge connects your computer to the ESP32 desk-pet, streaming real-time Copilot CLI events over USB serial. Two modes are available:
+The bridge connects your computer to the ESP32 desk-pet, streaming real-time Copilot CLI events over USB serial. It works across **all your repos and terminal sessions** — you install it once in this repo and leave it running.
 
-| Mode | How it works | Requires daemon? |
-|------|-------------|-----------------|
-| **Hook mode** (recommended) | Copilot CLI's native hooks push events directly | No |
-| **Daemon mode** | Long-running script polls for Copilot processes | Yes |
+| Mode | How it works | Scope |
+|------|-------------|-------|
+| **Daemon mode** (recommended) | Long-running process watches all Copilot CLI activity | All repos, all terminals |
+| **Hook mode** | Copilot CLI's native hooks push events directly | Only inside repos with `.github/hooks/` |
 
 ## Requirements
 
@@ -37,9 +37,40 @@ python -m pip install -r bridge/requirements.txt
 
 Activate the virtual environment (`Activate.ps1` or `source .venv/bin/activate`) each time you open a new terminal before running bridge, daemon, or test commands.
 
-## Hook Mode (recommended)
+## Daemon Mode (recommended)
 
-Uses the standalone Copilot CLI's `.github/hooks/` system — no background script needed. Copilot CLI invokes a short-lived Python process on each lifecycle event (session start, tool use, agent stop, etc.). Use daemon mode for `gh copilot suggest` / `gh copilot explain`.
+The daemon monitors Copilot CLI activity across **all repos and terminal sessions** by polling the process table and watching `~/.copilot/` for file changes. This is the primary way to use copilot-buddy — install once, leave it running, and use Copilot CLI anywhere.
+
+```bash
+# Auto-detect the ESP32 serial port
+python -m bridge.copilot_bridge
+
+# Explicit serial port
+python -m bridge.copilot_bridge --port COM3
+
+# Verbose / debug logging
+python -m bridge.copilot_bridge -v
+
+# Testing mode (no hardware needed)
+python -m bridge.copilot_bridge --transport loopback
+```
+
+### Command-line options
+
+| Flag | Default | Description |
+|---|---|---|
+| `--port PORT` | `auto` | Serial port (`COM3`, `/dev/ttyUSB0`, etc.) |
+| `--baud RATE` | `115200` | Serial baud rate |
+| `--transport {serial,loopback}` | `serial` | Transport backend |
+| `--poll-interval SECS` | `1.0` | Process scan interval |
+| `--copilot-dir DIR` | auto | Path to `~/.copilot` directory |
+| `-v, --verbose` | off | Enable debug logging |
+
+## Hook Mode (advanced — per-repo only)
+
+Uses the standalone Copilot CLI's `.github/hooks/` system — no background script needed. Copilot CLI invokes a short-lived Python process on each lifecycle event (session start, tool use, agent stop, etc.).
+
+Hooks provide **richer event detail** than daemon mode (tool names, error types, query text) but only work when Copilot CLI is invoked inside a repo that contains the hook scripts. This is primarily useful for developing copilot-buddy itself, or if you copy the `.github/hooks/` directory into your other projects.
 
 ### Setup
 
@@ -84,35 +115,6 @@ That's it. The pet reacts to Copilot CLI activity with no daemon running.
 ### Debugging hooks
 
 Set `COPILOT_BUDDY_LOG_LEVEL=DEBUG` to see all hook events and serial traffic on stderr. Use `COPILOT_BUDDY_DRY_RUN=true` to test without hardware.
-
-## Daemon Mode
-
-The daemon mode monitors Copilot CLI activity by polling the process table. Use this if you need to support `gh copilot suggest/explain` (which doesn't use hooks) or want periodic heartbeats.
-
-```bash
-# Auto-detect the ESP32 serial port
-python -m bridge.copilot_bridge
-
-# Explicit serial port
-python -m bridge.copilot_bridge --port COM3
-
-# Verbose / debug logging
-python -m bridge.copilot_bridge -v
-
-# Testing mode (no hardware needed)
-python -m bridge.copilot_bridge --transport loopback
-```
-
-### Command-line options
-
-| Flag | Default | Description |
-|---|---|---|
-| `--port PORT` | `auto` | Serial port (`COM3`, `/dev/ttyUSB0`, etc.) |
-| `--baud RATE` | `115200` | Serial baud rate |
-| `--transport {serial,loopback}` | `serial` | Transport backend |
-| `--poll-interval SECS` | `1.0` | Process scan interval |
-| `--copilot-dir DIR` | auto | Path to `~/.copilot` directory |
-| `-v, --verbose` | off | Enable debug logging |
 
 ## How it works
 
