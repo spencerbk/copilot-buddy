@@ -274,10 +274,15 @@ ESP32.
 ```
 bridge/
 ├── copilot_bridge.py       # Main bridge script
-├── watcher.py              # Process table / history monitor
+├── cli_watcher.py          # CLI file watcher (~/.copilot/)
+├── watcher.py              # Process table monitor
+├── service.py              # Auto-start service installer
 ├── transport_serial.py     # USB serial sender
+├── transport_loopback.py   # Loopback transport (testing)
 ├── transport_ble.py        # BLE NUS sender (optional)
-├── requirements.txt        # psutil, pyserial, bleak (optional)
+├── hook_bridge/            # Hook mode event handler
+├── constants.py            # Shared constants
+├── requirements.txt        # psutil, pyserial
 └── README.md
 ```
 
@@ -405,9 +410,14 @@ copilot-buddy/
 │
 ├── bridge/                      # Runs on your computer
 │   ├── copilot_bridge.py
+│   ├── cli_watcher.py
 │   ├── watcher.py
+│   ├── service.py
 │   ├── transport_serial.py
+│   ├── transport_loopback.py
 │   ├── transport_ble.py
+│   ├── hook_bridge/
+│   ├── constants.py
 │   ├── requirements.txt
 │   └── README.md
 │

@@ -6,6 +6,17 @@
 
 ## Done
 
+### Auto-start daemon service
+
+Added `bridge/service.py` — a CLI tool (`python -m bridge.service {install,uninstall,status}`)
+that registers the bridge daemon as a background service starting at login.
+Supports Windows (Task Scheduler), macOS (launchd), and Linux (systemd user
+service). Launcher wrapper scripts (`scripts/copilot-buddy-bridge.cmd` and
+`.sh`) resolve the `.venv` Python at runtime so the service survives venv
+recreation. The daemon now also stays running when the ESP32 is disconnected,
+retrying the serial connection in the background. A new `--log-file` flag
+enables rotating file logging for headless operation.
+
 ### Capacitive touch input support
 
 Added `touch_input.py` — a `TouchInput` class that drives the FT6206/FT6236

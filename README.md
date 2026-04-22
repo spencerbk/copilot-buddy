@@ -159,6 +159,7 @@ copilot-buddy/
 ├── bridge/                      # Host-side bridge (CPython)
 │   ├── constants.py             # Shared protocol constants
 │   ├── copilot_bridge.py        # Daemon mode bridge script
+│   ├── service.py               # Auto-start service installer
 │   ├── hook_bridge/             # Hook mode bridge (no daemon)
 │   ├── watcher.py               # Process scanner (gh copilot)
 │   ├── cli_watcher.py           # File watcher (standalone copilot)
@@ -174,6 +175,9 @@ copilot-buddy/
 │   └── replay.py               # Fixture replay tool
 ├── docs/
 │   └── wiring.md               # Pin diagrams per board
+├── scripts/                     # Launcher and helper scripts
+│   ├── copilot-buddy-bridge.*  # Daemon launcher (used by service)
+│   └── open-copilot.*          # Terminal openers
 └── tools/                       # Utilities
 ```
 
@@ -190,6 +194,7 @@ copilot-buddy/
 - ✅ Capacitive touch: tap scrolls HUD, horizontal swipe cycles pets (FT6206, optional)
 - ✅ Works with many board/display combinations (see table above)
 - ✅ Three firmware options (CircuitPython, MicroPython, Arduino)
+- ✅ Auto-start daemon service (Windows Task Scheduler / macOS launchd / Linux systemd)
 - ✅ Protocol test fixtures for development without hardware
 
 ---
