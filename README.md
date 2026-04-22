@@ -89,6 +89,29 @@ python -m bridge.copilot_bridge
 
 The bridge auto-detects the ESP32 serial port. Use `--port COM3` (Windows) or `--port /dev/ttyACM0` (Linux) to specify manually.
 
+#### Auto-start on login (optional)
+
+Install the daemon as a background service so it starts automatically when you log in:
+
+```bash
+python -m bridge.service install
+```
+
+This registers the daemon with your OS's service manager (Windows Task Scheduler / macOS launchd / Linux systemd). Logs are written to `~/.copilot-buddy/bridge.log`.
+
+You can pass daemon flags through — for example, to pin a serial port:
+
+```bash
+python -m bridge.service install --port COM3
+```
+
+Other commands:
+
+```bash
+python -m bridge.service status      # check if installed and running
+python -m bridge.service uninstall   # remove auto-start
+```
+
 ### 3. Use Copilot anywhere and watch your pet react!
 
 Open any repo in a separate terminal and use Copilot CLI as you normally would:

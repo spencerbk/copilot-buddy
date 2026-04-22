@@ -64,7 +64,41 @@ python -m bridge.copilot_bridge --transport loopback
 | `--transport {serial,loopback}` | `serial` | Transport backend |
 | `--poll-interval SECS` | `1.0` | Process scan interval |
 | `--copilot-dir DIR` | auto | Path to `~/.copilot` directory |
+| `--log-file PATH` | *(none)* | Also log to file (rotating, 1 MB × 3 backups) |
 | `-v, --verbose` | off | Enable debug logging |
+
+> **Note:** The daemon stays running even if the ESP32 is not connected. It retries the serial connection in the background and resumes automatically when the device is plugged in.
+
+### Auto-start on login
+
+Install the daemon as a background service so it starts automatically at login:
+
+```bash
+python -m bridge.service install
+```
+
+This uses the appropriate OS service manager:
+
+| OS | Backend | Service location |
+|---|---|---|
+| Windows | Task Scheduler | `schtasks /TN copilot-buddy-bridge` |
+| macOS | launchd | `~/Library/LaunchAgents/com.copilot-buddy.bridge.plist` |
+| Linux | systemd (user) | `~/.config/systemd/user/copilot-buddy-bridge.service` |
+
+You can pass daemon flags through the install command:
+
+```bash
+python -m bridge.service install --port COM3 -v
+```
+
+Manage the service:
+
+```bash
+python -m bridge.service status      # check if installed and running
+python -m bridge.service uninstall   # remove auto-start and stop the daemon
+```
+
+Logs are written to `~/.copilot-buddy/bridge.log`.
 
 ## Hook Mode (advanced — per-repo only)
 

@@ -120,10 +120,15 @@ def _send_event(
     transport: SerialTransport | LoopbackTransport,
     payload: dict,
 ) -> None:
-    """Serialise *payload* as newline-delimited JSON and send."""
+    """Serialise *payload* as newline-delimited JSON and send.
+
+    Silently queues retries when the transport is disconnected —
+    ``SerialTransport.send`` handles reconnection internally.
+    """
     line = json.dumps(payload, separators=(",", ":")) + "\n"
     if not transport.send(line):
-        log.warning("Failed to send: %s", line.rstrip())
+        # Debug-level: transport already logs reconnection attempts
+        log.debug("Send skipped (transport disconnected): %s", line.rstrip())
 
 
 # ------------------------------------------------------------------
@@ -257,21 +262,47 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--verbose", "-v", action="store_true", help="Enable debug logging"
     )
+    parser.add_argument(
+        "--log-file",
+        default=None,
+        help="Also log to this file (RotatingFileHandler, 1 MB × 3 backups)",
+    )
     args = parser.parse_args(argv)
 
     # --- Logging ---------------------------------------------------
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        format="%(asctime)s %(levelname)-7s %(name)s: %(message)s",
-        stream=sys.stderr,
-    )
+    log_level = logging.DEBUG if args.verbose else logging.INFO
+    log_fmt = "%(asctime)s %(levelname)-7s %(name)s: %(message)s"
+    root = logging.getLogger()
+    root.setLevel(log_level)
+
+    # Always log to stderr when running interactively
+    if sys.stderr.isatty() or args.log_file is None:
+        stderr_handler = logging.StreamHandler(sys.stderr)
+        stderr_handler.setFormatter(logging.Formatter(log_fmt))
+        root.addHandler(stderr_handler)
+
+    # Optionally log to a rotating file (used by service auto-start)
+    if args.log_file:
+        from logging.handlers import RotatingFileHandler
+
+        log_path = os.path.expanduser(args.log_file)
+        log_dir = os.path.dirname(log_path)
+        if log_dir:
+            os.makedirs(log_dir, exist_ok=True)
+        file_handler = RotatingFileHandler(
+            log_path, maxBytes=1_048_576, backupCount=3, encoding="utf-8"
+        )
+        file_handler.setFormatter(logging.Formatter(log_fmt))
+        root.addHandler(file_handler)
 
     # --- Transport -------------------------------------------------
     transport = _build_transport(args.transport, args.port, args.baud)
     if not transport.connect():
-        log.error("Could not connect transport — exiting")
-        sys.exit(1)
-    log.info("Transport ready (%s)", args.transport)
+        log.warning(
+            "Initial transport connection failed — will retry in background"
+        )
+    else:
+        log.info("Transport ready (%s)", args.transport)
 
     # --- Watchers --------------------------------------------------
     watcher = CopilotWatcher(poll_interval=args.poll_interval)
