@@ -1,10 +1,10 @@
 # Copilot Buddy — Wire Protocol
 
-Wire protocol between the host bridge (CPython) and the ESP32-S3 desk pet.
+Wire protocol between the host bridge (CPython) and the ESP32 desk pet.
 
 ## Transport
 
-- **Physical:** USB CDC serial (ESP32-S3 native USB)
+- **Physical:** USB CDC serial (ESP32-S2/S3 native USB)
 - **Baud rate:** 115 200
 - **Framing:** Newline-delimited UTF-8 JSON (`\n` terminator)
 - **Max line length:** 512 bytes (messages exceeding this are silently dropped)
@@ -24,17 +24,30 @@ Sent every **2 seconds** by the bridge so the device knows the host is
 alive and can update its display without polling.
 
 ```json
-{"state":"busy","query":"regex to validate email","mode":"suggest","queries_today":12,"total_queries":347,"ts":1775731234}
+{"state":"busy","mode":"suggest","queries_today":12,"total_queries":347,"ts":1775731234,"msg":"working...","entries":["c-b 10:42 regex for email","c-b 10:39 awk column sum"]}
 ```
 
-| Field           | Type   | Required | Description                                         |
-|-----------------|--------|----------|-----------------------------------------------------|
-| `state`         | string | yes      | One of `sleep`, `idle`, `busy`, `done`, `error`     |
-| `query`         | string | yes      | Current or most recent query text (may be `""`)     |
-| `mode`          | string | yes      | `"suggest"` or `"explain"`                          |
-| `queries_today` | int    | yes      | Queries since local midnight (reset by bridge)      |
-| `total_queries` | int    | yes      | Cumulative all-time query count                     |
-| `ts`            | int    | yes      | Unix epoch seconds — authoritative clock for device |
+| Field           | Type     | Required | Description                                           |
+|-----------------|----------|----------|-------------------------------------------------------|
+| `state`         | string   | yes      | One of `sleep`, `idle`, `busy`, `done`, `error`       |
+| `mode`          | string   | yes      | `"suggest"`, `"explain"`, or `"chat"`                 |
+| `queries_today` | int      | yes      | Queries since local midnight (reset by bridge)        |
+| `total_queries` | int      | yes      | Cumulative all-time query count                       |
+| `ts`            | int      | yes      | Unix epoch seconds — authoritative clock for device   |
+| `msg`           | string   | yes      | One-line HUD summary (e.g. `"working..."`, `"idle"`)  |
+| `entries`       | string[] | no       | Recent activity log, newest first (max 5). Omitted when empty. |
+| `query`         | string   | no       | Current query text. Omitted when `entries` is present.|
+
+**Entry format:** Each entry is `"<repo> HH:MM <query>"`, truncated to
+26 characters (matching the 320 px ILI9341 display at 2× font scale).
+The repo prefix is an abbreviation of the current git repository name:
+hyphenated names become initials (e.g. `copilot-buddy` → `c-b`),
+single-word names are truncated to 6 characters.
+The bridge builds entries from both the process watcher
+(`gh copilot suggest/explain`) and the CLI file watcher (standalone
+`copilot` CLI). The total serialized heartbeat line must stay under
+**480 bytes** (the device drops lines exceeding 512 bytes); the bridge
+trims entries from oldest if the limit is exceeded.
 
 **State machine (bridge-side):**
 
@@ -70,7 +83,7 @@ animation and then return to the heartbeat-driven state.
 |---------|--------|----------|------------------------|
 | `evt`   | string | yes      | Always `"start"`       |
 | `query` | string | yes      | The query text         |
-| `mode`  | string | yes      | `"suggest"` or `"explain"` |
+| `mode`  | string | yes      | `"suggest"`, `"explain"`, or `"chat"` |
 
 #### `end` — query completed
 
@@ -162,3 +175,11 @@ Sent in reply to `{"cmd":"status"}`.
 4. **Error budget:** The device silently drops unparseable lines and
    increments `stats.parse_errors`. The bridge can read this via the
    `status` command.
+
+5. **Standalone CLI detection:** The bridge watches files under
+   `~/.copilot/` to detect per-turn activity in the standalone
+   `copilot` CLI. `command-history-state.json` modifications signal
+   turn starts (with query text); `session-state/*/events.jsonl`
+   quiescence signals turn ends. These turns use `mode: "chat"`.
+   This supplements the process-lifecycle detection used for
+   `gh copilot suggest/explain`.

@@ -1,6 +1,6 @@
 """Button handler for copilot-buddy.
 
-Handles short press (cycle pet) and long press (show stats).
+Handles short press (scroll HUD) and long press (cycle pet).
 Debounced with software debounce.
 """
 

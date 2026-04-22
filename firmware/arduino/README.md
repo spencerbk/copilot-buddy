@@ -1,6 +1,6 @@
 # copilot-buddy — Arduino / PlatformIO Port
 
-C++ implementation of copilot-buddy for ESP32-S3 boards, mirroring the
+C++ implementation of copilot-buddy for ESP32-S2 and ESP32-S3 boards, mirroring the
 CircuitPython reference firmware.
 
 ## Prerequisites
@@ -34,6 +34,12 @@ Choose your target by specifying the PlatformIO environment:
 | `devkit_ssd1306`      | ESP32-S3 DevKit + SSD1306   | 128×64 I2C OLED    |
 | `m5stickc_plus2`      | M5StickC Plus2              | 135×240 SPI TFT    |
 | `lilygo_t_display_s3` | LILYGO T-Display-S3         | 170×320 SPI TFT    |
+| `qtpy_s2_ssd1306`     | QT Py ESP32-S2 + SSD1306   | 128×64 I2C OLED    |
+| `qtpy_s2_st7789`      | QT Py ESP32-S2 + ST7789    | 240×240 SPI TFT    |
+| `qtpy_s2_ili9341`     | QT Py ESP32-S2 + ILI9341   | 240×320 SPI TFT    |
+| `qtpy_s3_ssd1306`     | QT Py ESP32-S3 + SSD1306   | 128×64 I2C OLED    |
+| `qtpy_s3_st7789`      | QT Py ESP32-S3 + ST7789    | 240×240 SPI TFT    |
+| `qtpy_s3_ili9341`     | QT Py ESP32-S3 + ILI9341   | 240×320 SPI TFT    |
 
 You can also edit `copilot_buddy/config.h` directly to uncomment a board
 preset if you prefer building from the Arduino IDE.
@@ -47,7 +53,7 @@ See `copilot_buddy/config.h` for the full mapping per board.
 
 ```
 firmware/arduino/
-├── platformio.ini              # Build config (5 board environments)
+├── platformio.ini              # Build config (board environments)
 ├── README.md
 └── copilot_buddy/
     ├── copilot_buddy.ino       # Main sketch

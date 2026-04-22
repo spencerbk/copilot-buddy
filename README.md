@@ -1,6 +1,6 @@
 # copilot-buddy
 
-An ESP32-S3 desk pet that reacts to GitHub Copilot CLI activity in real time.
+An ESP32-S2/S3 desk pet that reacts to GitHub Copilot CLI activity in real time.
 
 Inspired by [claude-desktop-buddy](https://github.com/anthropics/claude-desktop-buddy) by Anthropic.
 
@@ -10,7 +10,7 @@ Inspired by [claude-desktop-buddy](https://github.com/anthropics/claude-desktop-
 
 ## What Is This?
 
-A small animated character lives on your desk, displayed on a TFT or OLED screen connected to an ESP32-S3. When you use `gh copilot suggest` or `gh copilot explain`, the pet reacts — working hard while your query runs, celebrating milestones, and sleeping when idle.
+A small animated character lives on your desk, displayed on a TFT or OLED screen connected to an ESP32-S2 or ESP32-S3. When you use the Copilot CLI — whether `gh copilot suggest`, `gh copilot explain`, or the standalone `copilot` command — the pet reacts, working hard while your query runs, celebrating milestones, and sleeping when idle.
 
 ### Pet States
 
@@ -18,7 +18,7 @@ A small animated character lives on your desk, displayed on a TFT or OLED screen
 |-------------|--------------------------------------|-----------------------|
 | 💤 Sleep    | No activity for 5+ minutes          | Eyes closed, breathing |
 | 😊 Idle     | Bridge connected, no active query    | Blinking, looking around |
-| 💻 Busy     | `gh copilot` query running           | Sweating, typing      |
+| 💻 Busy     | Copilot CLI query running            | Sweating, typing      |
 | ❗ Attention | Response ready                       | Alert, bouncing       |
 | 🎉 Celebrate| Milestone (every 50 queries)         | Dancing, confetti     |
 | 😵 Dizzy    | Error detected                       | Spiral eyes, wobbling |
@@ -26,7 +26,7 @@ A small animated character lives on your desk, displayed on a TFT or OLED screen
 
 ### Choose Your Pet
 
-Six ASCII art pets included: **Octocat**, **Crab**, **Fox**, **Owl**, **Robot**, **Ghost**. Cycle through them with a button press.
+Six ASCII art pets included: **Octocat**, **Crab**, **Fox**, **Owl**, **Robot**, **Ghost**. Cycle through them with a long press.
 
 ---
 
@@ -39,6 +39,13 @@ Six ASCII art pets included: **Octocat**, **Crab**, **Fox**, **Owl**, **Robot**,
 | **ESP32-S3 DevKit + ILI9341** | 240×320 TFT    | Largest screen                  |
 | **M5StickC Plus2**            | 135×240 TFT    | All-in-one, no wiring needed   |
 | **LILYGO T-Display-S3**      | 170×320 TFT    | Built-in display, USB-C        |
+| **QT Py ESP32-S2 + SSD1306** | 128×64 OLED    | STEMMA QT plug-and-play, no BLE |
+| **QT Py ESP32-S2 + ST7789**  | 240×240 TFT    | Tiny board, SPI wiring, no BLE  |
+| **QT Py ESP32-S2 + ILI9341** | 240×320 TFT    | Tiny board, SPI wiring, no BLE  |
+| **QT Py ESP32-S2 + EYESPI BFF + ILI9341** | 240×320 TFT | Via EYESPI FPC cable, no loose wires, no BLE |
+| **QT Py ESP32-S3 + SSD1306** | 128×64 OLED    | STEMMA QT plug-and-play         |
+| **QT Py ESP32-S3 + ST7789**  | 240×240 TFT    | Tiny board, SPI wiring          |
+| **QT Py ESP32-S3 + ILI9341** | 240×320 TFT    | Tiny board, SPI wiring          |
 
 See [docs/wiring.md](docs/wiring.md) for pin diagrams.
 
@@ -46,7 +53,7 @@ See [docs/wiring.md](docs/wiring.md) for pin diagrams.
 
 ## Quick Start
 
-### 1. Flash firmware to your ESP32-S3
+### 1. Flash firmware to your ESP32
 
 Three firmware options are provided — pick one:
 
@@ -57,31 +64,67 @@ Three firmware options are provided — pick one:
 | **Arduino (C++)** | `firmware/arduino/` | Performance, C++ developers |
 
 **CircuitPython setup:**
-1. Install [CircuitPython 9.x](https://circuitpython.org/downloads) on your ESP32-S3
-2. Install libraries: `adafruit_st7789` (or your display driver), `adafruit_display_text`
+1. Install [CircuitPython 10.x](https://circuitpython.org/downloads) on your ESP32-S2 or ESP32-S3
+2. Install libraries: `adafruit_st7789` (or your display driver), `adafruit_display_text` — plus `adafruit_focaltouch` and `adafruit_bus_device` if your display has capacitive touch
 3. Edit `config.py` — uncomment your board
 4. Copy all files from `firmware/circuitpython/` to the `CIRCUITPY` drive
-5. **Hard reset** the board (boot.py only takes effect on hard reset)
+5. **Hard reset** the board — `boot.py` takes effect on hard reset and disables the USB drive on ESP32-S2 (use safe mode to copy files afterward; see `firmware/circuitpython/README.md`)
 
-### 2. Run the host bridge
+### 2. Start the bridge daemon
 
-The bridge runs on your computer and sends events to the ESP32:
+The bridge runs in the background and detects Copilot CLI activity across **all your repos and terminal sessions** — no per-repo setup needed.
+
+From the `copilot-buddy` repository root:
 
 ```bash
-cd bridge
-pip install -r requirements.txt
+python -m venv .venv            # one-time setup
+# Windows PowerShell:
+.venv\Scripts\Activate.ps1
+# macOS / Linux:
+# source .venv/bin/activate
+
+python -m pip install -r bridge/requirements.txt
 python -m bridge.copilot_bridge
 ```
 
 The bridge auto-detects the ESP32 serial port. Use `--port COM3` (Windows) or `--port /dev/ttyACM0` (Linux) to specify manually.
 
-### 3. Use Copilot and watch your pet react!
+#### Auto-start on login (optional)
+
+Install the daemon as a background service so it starts automatically when you log in:
 
 ```bash
+python -m bridge.service install
+```
+
+This registers the daemon with your OS's service manager (Windows Task Scheduler / macOS launchd / Linux systemd). Logs are written to `~/.copilot-buddy/bridge.log`.
+
+You can pass daemon flags through — for example, to pin a serial port:
+
+```bash
+python -m bridge.service install --port COM3
+```
+
+Other commands:
+
+```bash
+python -m bridge.service status      # check if installed and running
+python -m bridge.service uninstall   # remove auto-start
+```
+
+### 3. Use Copilot anywhere and watch your pet react!
+
+Open any repo in a separate terminal and use Copilot CLI as you normally would:
+
+```bash
+cd ~/my-other-project
+copilot "refactor the auth module"
 gh copilot suggest "how to reverse a linked list"
 ```
 
 Your desk pet will transition: idle → busy → attention → idle.
+
+> **Advanced: Hook mode** — If you use the standalone Copilot CLI inside the `copilot-buddy` repo itself, the `.github/hooks/` scripts provide richer event detail (tool names, error types) without the daemon. See [bridge/README.md](bridge/README.md) for details.
 
 ---
 
@@ -89,10 +132,10 @@ Your desk pet will transition: idle → busy → attention → idle.
 
 ```
 ┌──────────────────┐        USB Serial       ┌──────────────────┐
-│   Your Computer  │  ──────────────────▶   │    ESP32-S3      │
+│   Your Computer  │  ──────────────────▶   │  ESP32-S2/S3     │
 │                  │    JSON messages        │                  │
 │  ┌────────────┐  │    (newline-delim)      │  ┌────────────┐  │
-│  │ gh copilot │  │                        │  │  Display    │  │
+│  │Copilot CLI │  │                        │  │  Display    │  │
 │  └─────┬──────┘  │                        │  │  + Pet      │  │
 │  ┌─────▼──────┐  │                        │  └────────────┘  │
 │  │  Bridge    │  │                        │                  │
@@ -101,7 +144,7 @@ Your desk pet will transition: idle → busy → attention → idle.
 └──────────────────┘                        └──────────────────┘
 ```
 
-The bridge uses `psutil` to scan for `gh copilot` processes and sends JSON heartbeats/events over USB serial. See [protocol/schema.md](protocol/schema.md) for the wire protocol.
+The bridge connects to the ESP32 using two modes: **hook mode** uses Copilot CLI's native `.github/hooks/` system for zero-daemon operation (each CLI event fires a short-lived Python process), while **daemon mode** polls for processes using `psutil` and file watching. Both send JSON heartbeats/events over USB serial. See [protocol/schema.md](protocol/schema.md) for the wire protocol.
 
 ---
 
@@ -109,9 +152,17 @@ The bridge uses `psutil` to scan for `gh copilot` processes and sends JSON heart
 
 ```
 copilot-buddy/
+├── .github/hooks/               # Copilot CLI hook integration
+│   ├── copilot-buddy.json       # Hook event registration
+│   ├── run-hook.ps1             # PowerShell wrapper
+│   └── run-hook.sh              # Bash wrapper
 ├── bridge/                      # Host-side bridge (CPython)
-│   ├── copilot_bridge.py        # Main bridge script
-│   ├── watcher.py               # Process scanner
+│   ├── constants.py             # Shared protocol constants
+│   ├── copilot_bridge.py        # Daemon mode bridge script
+│   ├── service.py               # Auto-start service installer
+│   ├── hook_bridge/             # Hook mode bridge (no daemon)
+│   ├── watcher.py               # Process scanner (gh copilot)
+│   ├── cli_watcher.py           # File watcher (standalone copilot)
 │   ├── transport_serial.py      # USB serial transport
 │   └── tests/                   # pytest test suite
 ├── firmware/
@@ -124,6 +175,9 @@ copilot-buddy/
 │   └── replay.py               # Fixture replay tool
 ├── docs/
 │   └── wiring.md               # Pin diagrams per board
+├── scripts/                     # Launcher and helper scripts
+│   ├── copilot-buddy-bridge.*  # Daemon launcher (used by service)
+│   └── open-copilot.*          # Terminal openers
 └── tools/                       # Utilities
 ```
 
@@ -135,28 +189,39 @@ copilot-buddy/
 - ✅ Real-time Copilot CLI activity detection
 - ✅ Persistent query stats across reboots
 - ✅ Screen auto-off after 30s idle, wake on activity
-- ✅ Button: short press cycles pets, long press shows stats
-- ✅ Works with 5 board/display combinations
+- ✅ HUD transcript: 5-line activity log at the bottom of the display (repo + HH:MM + query)
+- ✅ Button: short press scrolls transcript, long press cycles pets
+- ✅ Capacitive touch: tap scrolls HUD, horizontal swipe cycles pets (FT6206, optional)
+- ✅ Works with many board/display combinations (see table above)
 - ✅ Three firmware options (CircuitPython, MicroPython, Arduino)
+- ✅ Auto-start daemon service (Windows Task Scheduler / macOS launchd / Linux systemd)
 - ✅ Protocol test fixtures for development without hardware
 
 ---
 
 ## Development
 
+All commands below assume you are in the **repository root** with the virtual environment activated.
+
 ### Bridge tests
 ```bash
-pip install -r bridge/requirements.txt
-pip install pytest
+python -m pip install -r bridge/requirements.txt
+python -m pip install pytest
 python -m pytest bridge/tests/ -v
 ```
 
 ### Protocol replay (test firmware without the bridge)
+
+Requires `pyserial` (already in `bridge/requirements.txt`):
+
 ```bash
 python protocol/replay.py protocol/fixtures/full_session.jsonl --port COM3
 ```
 
 ### Linting
+
+Requires `ruff` (`python -m pip install ruff`):
+
 ```bash
 python -m ruff check bridge/ protocol/ firmware/circuitpython/ firmware/micropython/
 ```

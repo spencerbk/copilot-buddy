@@ -13,11 +13,21 @@
 // #define BOARD_DEVKIT_SSD1306
 // #define BOARD_DEVKIT_ST7789
 // #define BOARD_DEVKIT_ILI9341
+// #define BOARD_QTPY_S2_SSD1306
+// #define BOARD_QTPY_S2_ST7789
+// #define BOARD_QTPY_S2_ILI9341
+// #define BOARD_QTPY_S3_SSD1306
+// #define BOARD_QTPY_S3_ST7789
+// #define BOARD_QTPY_S3_ILI9341
 
 // Default to DEVKIT_ST7789 if nothing is defined
 #if !defined(BOARD_M5STICKC_PLUS2) && !defined(BOARD_LILYGO_T_DISPLAY_S3) && \
     !defined(BOARD_DEVKIT_SSD1306) && !defined(BOARD_DEVKIT_ST7789) && \
-    !defined(BOARD_DEVKIT_ILI9341)
+    !defined(BOARD_DEVKIT_ILI9341) && \
+    !defined(BOARD_QTPY_S2_SSD1306) && !defined(BOARD_QTPY_S2_ST7789) && \
+    !defined(BOARD_QTPY_S2_ILI9341) && \
+    !defined(BOARD_QTPY_S3_SSD1306) && !defined(BOARD_QTPY_S3_ST7789) && \
+    !defined(BOARD_QTPY_S3_ILI9341)
   #define BOARD_DEVKIT_ST7789
 #endif
 
@@ -120,6 +130,132 @@
   #define PIN_DC            9
   #define PIN_RST           8
   #define PIN_BL            7
+  #define BL_ACTIVE_HIGH    true
+  #define SPI_FREQ          24000000
+  #define TFT_COLOR_ORDER   1       // BGR
+  #define TFT_COLSTART      0
+  #define TFT_ROWSTART      0
+  #define PIN_BUTTON        0
+  #define BUTTON_ACTIVE_LOW true
+  #define IS_COLOR_DISPLAY  true
+  #define IS_SPI_DISPLAY    true
+
+// ─── QT Py ESP32-S2 + SSD1306 I2C OLED ─────────────────────────────────────
+#elif defined(BOARD_QTPY_S2_SSD1306)
+  #define BOARD_NAME        "QT Py ESP32-S2 + SSD1306"
+  #define DISPLAY_TYPE      "SSD1306"
+  #define DISPLAY_WIDTH     128
+  #define DISPLAY_HEIGHT    64
+  #define DISPLAY_ROTATION  0
+  #define PIN_SDA           41      // STEMMA QT
+  #define PIN_SCL           40      // STEMMA QT
+  #define I2C_ADDR          0x3C
+  #define PIN_BL            -1
+  #define BL_ACTIVE_HIGH    false
+  #define PIN_BUTTON        0
+  #define BUTTON_ACTIVE_LOW true
+  #define IS_COLOR_DISPLAY  false
+  #define IS_SPI_DISPLAY    false
+
+// ─── QT Py ESP32-S2 + ST7789 SPI TFT ───────────────────────────────────────
+#elif defined(BOARD_QTPY_S2_ST7789)
+  #define BOARD_NAME        "QT Py ESP32-S2 + ST7789"
+  #define DISPLAY_TYPE      "ST7789"
+  #define DISPLAY_WIDTH     240
+  #define DISPLAY_HEIGHT    240
+  #define DISPLAY_ROTATION  0
+  #define PIN_SCK           36
+  #define PIN_MOSI          35
+  #define PIN_CS            18      // A0
+  #define PIN_DC            17      // A1
+  #define PIN_RST           9       // A2
+  #define PIN_BL            8       // A3
+  #define BL_ACTIVE_HIGH    true
+  #define SPI_FREQ          24000000
+  #define TFT_COLOR_ORDER   1       // BGR
+  #define TFT_COLSTART      0
+  #define TFT_ROWSTART      0
+  #define PIN_BUTTON        0
+  #define BUTTON_ACTIVE_LOW true
+  #define IS_COLOR_DISPLAY  true
+  #define IS_SPI_DISPLAY    true
+
+// ─── QT Py ESP32-S2 + ILI9341 SPI TFT ──────────────────────────────────────
+#elif defined(BOARD_QTPY_S2_ILI9341)
+  #define BOARD_NAME        "QT Py ESP32-S2 + ILI9341"
+  #define DISPLAY_TYPE      "ILI9341"
+  #define DISPLAY_WIDTH     240
+  #define DISPLAY_HEIGHT    320
+  #define DISPLAY_ROTATION  0
+  #define PIN_SCK           36
+  #define PIN_MOSI          35
+  #define PIN_CS            18
+  #define PIN_DC            17
+  #define PIN_RST           9
+  #define PIN_BL            8
+  #define BL_ACTIVE_HIGH    true
+  #define SPI_FREQ          24000000
+  #define TFT_COLOR_ORDER   1       // BGR
+  #define TFT_COLSTART      0
+  #define TFT_ROWSTART      0
+  #define PIN_BUTTON        0
+  #define BUTTON_ACTIVE_LOW true
+  #define IS_COLOR_DISPLAY  true
+  #define IS_SPI_DISPLAY    true
+
+// ─── QT Py ESP32-S3 + SSD1306 I2C OLED ─────────────────────────────────────
+#elif defined(BOARD_QTPY_S3_SSD1306)
+  #define BOARD_NAME        "QT Py ESP32-S3 + SSD1306"
+  #define DISPLAY_TYPE      "SSD1306"
+  #define DISPLAY_WIDTH     128
+  #define DISPLAY_HEIGHT    64
+  #define DISPLAY_ROTATION  0
+  #define PIN_SDA           41      // STEMMA QT
+  #define PIN_SCL           40      // STEMMA QT
+  #define I2C_ADDR          0x3C
+  #define PIN_BL            -1
+  #define BL_ACTIVE_HIGH    false
+  #define PIN_BUTTON        0
+  #define BUTTON_ACTIVE_LOW true
+  #define IS_COLOR_DISPLAY  false
+  #define IS_SPI_DISPLAY    false
+
+// ─── QT Py ESP32-S3 + ST7789 SPI TFT ───────────────────────────────────────
+#elif defined(BOARD_QTPY_S3_ST7789)
+  #define BOARD_NAME        "QT Py ESP32-S3 + ST7789"
+  #define DISPLAY_TYPE      "ST7789"
+  #define DISPLAY_WIDTH     240
+  #define DISPLAY_HEIGHT    240
+  #define DISPLAY_ROTATION  0
+  #define PIN_SCK           36
+  #define PIN_MOSI          35
+  #define PIN_CS            18      // A0
+  #define PIN_DC            17      // A1
+  #define PIN_RST           9       // A2
+  #define PIN_BL            8       // A3
+  #define BL_ACTIVE_HIGH    true
+  #define SPI_FREQ          24000000
+  #define TFT_COLOR_ORDER   1       // BGR
+  #define TFT_COLSTART      0
+  #define TFT_ROWSTART      0
+  #define PIN_BUTTON        0
+  #define BUTTON_ACTIVE_LOW true
+  #define IS_COLOR_DISPLAY  true
+  #define IS_SPI_DISPLAY    true
+
+// ─── QT Py ESP32-S3 + ILI9341 SPI TFT ──────────────────────────────────────
+#elif defined(BOARD_QTPY_S3_ILI9341)
+  #define BOARD_NAME        "QT Py ESP32-S3 + ILI9341"
+  #define DISPLAY_TYPE      "ILI9341"
+  #define DISPLAY_WIDTH     240
+  #define DISPLAY_HEIGHT    320
+  #define DISPLAY_ROTATION  0
+  #define PIN_SCK           36
+  #define PIN_MOSI          35
+  #define PIN_CS            18
+  #define PIN_DC            17
+  #define PIN_RST           9
+  #define PIN_BL            8
   #define BL_ACTIVE_HIGH    true
   #define SPI_FREQ          24000000
   #define TFT_COLOR_ORDER   1       // BGR

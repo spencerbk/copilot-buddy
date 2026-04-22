@@ -30,15 +30,19 @@
 | circuitpython-quality-gate | Run the standard CircuitPython quality gate (Ruff + Pyright static analysis only) for changed files or a specified scope. No pytest. |
 | circuitpython-refactor | Safely refactor CircuitPython code within a bounded scope while preserving behavior and following Adafruit conventions. Uses static analysis only — no pytest. |
 | circuitpython-security-scan | Run a security audit on CircuitPython code using Ruff S rules and embedded-specific checks, fix findings iteratively, and re-validate until clean. |
+| circuitpython-test-generation | Generate validation scripts for CircuitPython modules that have zero or minimal tests. Analyze the public API, produce lightweight test scripts respecting CIRCUITPY filesystem constraints, and validate. |
 | circuitpython-type-fix | Run Pyright on a CircuitPython scope, fix all type errors iteratively, and re-validate until clean. Static analysis only — no pytest. |
 | commit-push | Generate a single-line commit message, commit changes, and push to the remote. Supports two modes — stage all changes or commit only staged files. |
 | commit-push-all | Stage all current changes, generate a commit message, commit, and push to the remote. Use when asked to commit and push everything. |
 | commit-push-staged | Generate a commit message, commit only the already-staged files, and push to the remote. Does not stage additional changes. |
 | documentation-update | Update project-level documentation (README.md, /docs/) to reflect code changes — behavior changes, new features, API changes, renamed or removed functionality, and configuration changes. |
+| log-analysis | Analyze source code logging patterns for silent catches, missing correlation IDs, secrets in log output, inconsistent levels, and structural gaps. Reviews code, not runtime logs. |
 | orchestrated-build | Auto-detect project ecosystem and run the full multi-agent implementation workflow — use this instead of picking a specific ecosystem skill |
 | orchestrated-build-circuitpython | Run the standard multi-agent CircuitPython implementation workflow with multi-perspective codebase exploration, architecture design, and quality review |
+| security-threat-model | Build a STRIDE threat model from code-discovered architecture — identify trust boundaries, generate data flow diagrams, and map threats to mitigations. Complements code-level security-scan. |
 | self-review | Iteratively review, fix, and re-verify your own work until it is complete and correct. Use when asked to review your work, verify changes, iterate until clean, or run a GO/NO-GO review loop. |
 | setup | Detect the project ecosystem and set up the development environment — install dependencies, create virtual environments, resolve packages, and verify the setup works. |
+| test-quality-analysis | Evaluate test effectiveness beyond coverage — detect weak assertions, over-mocking, and tests that would not catch real bugs. Score and triage tests for improvement. |
 | writing-plans | Use when you have an approved design or spec for a multi-step task, before touching code. Breaks work into bite-sized implementation tasks with exact file paths, complete code, and verification steps. |
 
 ## Instructions

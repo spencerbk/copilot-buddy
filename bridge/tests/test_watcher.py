@@ -97,6 +97,50 @@ def test_scan_ignores_unrelated_process(mock_iter: MagicMock) -> None:
 
 
 @patch("bridge.watcher.psutil.process_iter")
+def test_scan_finds_standalone_copilot_process(mock_iter: MagicMock) -> None:
+    """Standalone ``copilot --yolo`` CLI should be detected."""
+    mock_iter.return_value = [
+        _make_proc(500, "copilot", ["copilot", "--yolo", "--experimental"]),
+    ]
+    results = scan_processes()
+    assert len(results) == 1
+    assert results[0]["pid"] == 500
+    assert results[0]["mode"] == "suggest"  # default when no suggest/explain
+    assert results[0]["query"] == ""
+
+
+@patch("bridge.watcher.psutil.process_iter")
+def test_scan_finds_standalone_copilot_exe(mock_iter: MagicMock) -> None:
+    """Windows ``copilot.exe`` should also be detected."""
+    mock_iter.return_value = [
+        _make_proc(501, "copilot.exe", ["copilot.exe", "--experimental"]),
+    ]
+    results = scan_processes()
+    assert len(results) == 1
+    assert results[0]["pid"] == 501
+
+
+@patch("bridge.watcher.psutil.process_iter")
+def test_scan_ignores_copilot_language_server(mock_iter: MagicMock) -> None:
+    """VS Code Copilot language server is not the CLI."""
+    mock_iter.return_value = [
+        _make_proc(600, "github-copilot-language-server", ["github-copilot-language-server", "--stdio"]),
+    ]
+    results = scan_processes()
+    assert results == []
+
+
+@patch("bridge.watcher.psutil.process_iter")
+def test_scan_ignores_bridge_self(mock_iter: MagicMock) -> None:
+    """Bridge process with 'copilot' in its path should not self-detect."""
+    mock_iter.return_value = [
+        _make_proc(700, "python", ["python", "c:\\code\\copilot-buddy\\bridge\\copilot_bridge.py"]),
+    ]
+    results = scan_processes()
+    assert results == []
+
+
+@patch("bridge.watcher.psutil.process_iter")
 def test_scan_handles_none_cmdline(mock_iter: MagicMock) -> None:
     mock_iter.return_value = [_make_proc(400, "system", None)]
     results = scan_processes()

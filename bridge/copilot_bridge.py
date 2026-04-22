@@ -11,10 +11,22 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import signal
+import subprocess
 import sys
 import time
+from datetime import datetime
 
+from bridge.cli_watcher import CLIWatcher
+from bridge.constants import (
+    MAX_ENTRIES,
+    MAX_ENTRY_LEN,
+    STATE_BUSY,
+    STATE_IDLE,
+    STATE_SLEEP,
+    abbreviate_repo,
+)
 from bridge.transport_loopback import LoopbackTransport
 from bridge.transport_serial import SerialTransport
 from bridge.watcher import CopilotWatcher
@@ -23,6 +35,70 @@ log = logging.getLogger("copilot_bridge")
 
 # Heartbeat cadence in seconds.
 _HEARTBEAT_INTERVAL = 2.0
+
+# HUD transcript ring buffer config.
+_MAX_LINE_BYTES = 480  # leave headroom under 512-byte device limit
+
+
+# ------------------------------------------------------------------
+# Repo name detection
+# ------------------------------------------------------------------
+
+def _detect_repo_name() -> str:
+    """Detect the current git repo name, falling back to CWD basename."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True, text=True, timeout=5,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return os.path.basename(result.stdout.strip())
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    return os.path.basename(os.getcwd())
+
+
+_repo_name: str = ""
+
+
+def _get_repo_name() -> str:
+    """Return cached repo name (detected lazily on first call)."""
+    global _repo_name  # noqa: PLW0603
+    if not _repo_name:
+        _repo_name = _detect_repo_name()
+    return _repo_name
+
+
+# ------------------------------------------------------------------
+# Transcript ring buffer
+# ------------------------------------------------------------------
+
+_entries: list[str] = []
+
+
+def _add_entry(query: str) -> None:
+    """Prepend a repo-prefixed, timestamped query to the entries ring buffer."""
+    repo = abbreviate_repo(_get_repo_name())
+    ts = datetime.now().strftime("%H:%M")
+    # Format: "repo HH:MM query" — budget chars for repo + space + time + space
+    prefix = f"{repo} {ts} "
+    max_q = MAX_ENTRY_LEN - len(prefix)
+    q = query[:max_q] if query else "?"
+    entry = f"{prefix}{q}"
+    _entries.insert(0, entry)
+    while len(_entries) > MAX_ENTRIES:
+        _entries.pop()
+
+
+def _build_msg(state: str, connected: bool) -> str:
+    """Build a one-line summary suitable for the HUD."""
+    if not connected:
+        return "No Copilot connected"
+    if state == STATE_BUSY:
+        return "working..."
+    if state == STATE_SLEEP:
+        return "sleeping"
+    return STATE_IDLE
 
 
 # ------------------------------------------------------------------
@@ -44,10 +120,15 @@ def _send_event(
     transport: SerialTransport | LoopbackTransport,
     payload: dict,
 ) -> None:
-    """Serialise *payload* as newline-delimited JSON and send."""
+    """Serialise *payload* as newline-delimited JSON and send.
+
+    Silently queues retries when the transport is disconnected —
+    ``SerialTransport.send`` handles reconnection internally.
+    """
     line = json.dumps(payload, separators=(",", ":")) + "\n"
     if not transport.send(line):
-        log.warning("Failed to send: %s", line.rstrip())
+        # Debug-level: transport already logs reconnection attempts
+        log.debug("Send skipped (transport disconnected): %s", line.rstrip())
 
 
 # ------------------------------------------------------------------
@@ -58,6 +139,7 @@ def _send_event(
 def run(
     transport: SerialTransport | LoopbackTransport,
     watcher: CopilotWatcher,
+    cli_watcher: CLIWatcher | None = None,
 ) -> None:
     """Core poll/send loop.  Runs until interrupted."""
     last_heartbeat = 0.0
@@ -71,21 +153,73 @@ def run(
             events = []
 
         for evt in events:
+            # Add start events to the transcript ring buffer
+            if evt.get("evt") == "start" and evt.get("query"):
+                _add_entry(evt["query"])
+            _send_event(transport, evt)
+
+        # --- Poll CLI file watcher ---------------------------------
+        cli_events: list[dict] = []
+        if cli_watcher is not None:
+            try:
+                cli_events = cli_watcher.poll()
+            except Exception:
+                log.error("CLI watcher poll failed", exc_info=True)
+
+        for evt in cli_events:
+            # Add start events to the transcript ring buffer
+            if evt.get("evt") == "start" and evt.get("query"):
+                _add_entry(evt["query"])
             _send_event(transport, evt)
 
         # --- Periodic heartbeat ------------------------------------
         now = time.monotonic()
         if now - last_heartbeat >= _HEARTBEAT_INTERVAL:
-            # Include the active query/mode so the device can display it.
-            active = next(iter(watcher.active_pids.values()), None)
-            heartbeat = {
-                "state": watcher.state,
-                "query": active["query"] if active else "",
-                "mode": active["mode"] if active else "suggest",
-                "queries_today": watcher.queries_today,
-                "total_queries": watcher.total_queries,
+            # CLI watcher takes precedence when it has detected activity,
+            # providing per-turn granularity for the standalone CLI.
+            if cli_watcher is not None and (
+                cli_watcher._turn_active or cli_watcher.total_queries > 0
+            ):
+                hb_state = cli_watcher.state
+                hb_query = cli_watcher.query
+                hb_mode = "chat"
+                hb_queries_today = cli_watcher.queries_today + watcher.queries_today
+                hb_total = cli_watcher.total_queries + watcher.total_queries
+            else:
+                active = next(iter(watcher.active_pids.values()), None)
+                hb_state = watcher.state
+                hb_query = active["query"] if active else ""
+                hb_mode = active["mode"] if active else "suggest"
+                hb_queries_today = watcher.queries_today
+                hb_total = watcher.total_queries
+
+            connected = hb_state != STATE_SLEEP or hb_total > 0
+
+            heartbeat: dict = {
+                "state": hb_state,
+                "mode": hb_mode,
+                "queries_today": hb_queries_today,
+                "total_queries": hb_total,
                 "ts": int(time.time()),
+                "msg": _build_msg(hb_state, connected),
             }
+
+            # Include entries if we have them (saves bytes vs always sending [])
+            if _entries:
+                heartbeat["entries"] = list(_entries)
+
+            # Only include query when no entries (saves bytes)
+            if not _entries and hb_query:
+                heartbeat["query"] = hb_query
+
+            # Safety: trim entries if serialized line exceeds byte budget
+            line = json.dumps(heartbeat, separators=(",", ":"))
+            while len(line.encode("utf-8")) > _MAX_LINE_BYTES and heartbeat.get("entries"):
+                heartbeat["entries"].pop()
+                if not heartbeat["entries"]:
+                    del heartbeat["entries"]
+                line = json.dumps(heartbeat, separators=(",", ":"))
+
             _send_event(transport, heartbeat)
             last_heartbeat = now
 
@@ -121,36 +255,72 @@ def main(argv: list[str] | None = None) -> None:
         help="Process scan interval in seconds (default: 1.0)",
     )
     parser.add_argument(
+        "--copilot-dir",
+        default=None,
+        help="Path to ~/.copilot directory (default: auto-detect)",
+    )
+    parser.add_argument(
         "--verbose", "-v", action="store_true", help="Enable debug logging"
+    )
+    parser.add_argument(
+        "--log-file",
+        default=None,
+        help="Also log to this file (RotatingFileHandler, 1 MB × 3 backups)",
     )
     args = parser.parse_args(argv)
 
     # --- Logging ---------------------------------------------------
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        format="%(asctime)s %(levelname)-7s %(name)s: %(message)s",
-        stream=sys.stderr,
-    )
+    log_level = logging.DEBUG if args.verbose else logging.INFO
+    log_fmt = "%(asctime)s %(levelname)-7s %(name)s: %(message)s"
+    root = logging.getLogger()
+    root.setLevel(log_level)
+
+    # Always log to stderr when running interactively
+    if sys.stderr.isatty() or args.log_file is None:
+        stderr_handler = logging.StreamHandler(sys.stderr)
+        stderr_handler.setFormatter(logging.Formatter(log_fmt))
+        root.addHandler(stderr_handler)
+
+    # Optionally log to a rotating file (used by service auto-start)
+    if args.log_file:
+        from logging.handlers import RotatingFileHandler
+
+        log_path = os.path.expanduser(args.log_file)
+        log_dir = os.path.dirname(log_path)
+        if log_dir:
+            os.makedirs(log_dir, exist_ok=True)
+        file_handler = RotatingFileHandler(
+            log_path, maxBytes=1_048_576, backupCount=3, encoding="utf-8"
+        )
+        file_handler.setFormatter(logging.Formatter(log_fmt))
+        root.addHandler(file_handler)
 
     # --- Transport -------------------------------------------------
     transport = _build_transport(args.transport, args.port, args.baud)
     if not transport.connect():
-        log.error("Could not connect transport — exiting")
-        sys.exit(1)
-    log.info("Transport ready (%s)", args.transport)
+        log.warning(
+            "Initial transport connection failed — will retry in background"
+        )
+    else:
+        log.info("Transport ready (%s)", args.transport)
 
-    # --- Watcher ---------------------------------------------------
+    # --- Watchers --------------------------------------------------
     watcher = CopilotWatcher(poll_interval=args.poll_interval)
+    cli_watcher = CLIWatcher(copilot_dir=args.copilot_dir)
+    log.info("CLI file watcher enabled (dir: %s)", cli_watcher.copilot_dir)
 
     # --- Graceful shutdown -----------------------------------------
     def _shutdown(signum: int, _frame: object) -> None:
         sig_name = signal.Signals(signum).name
         log.info("Received %s — shutting down", sig_name)
         transport.disconnect()
+        total = watcher.queries_today + cli_watcher.queries_today
         log.info(
-            "Session summary: %d queries today, %d total",
+            "Session summary: %d queries today (%d process, %d CLI), %d total",
+            total,
             watcher.queries_today,
-            watcher.total_queries,
+            cli_watcher.queries_today,
+            watcher.total_queries + cli_watcher.total_queries,
         )
         sys.exit(0)
 
@@ -160,7 +330,7 @@ def main(argv: list[str] | None = None) -> None:
     # --- Run -------------------------------------------------------
     log.info("Bridge running — monitoring Copilot CLI activity")
     try:
-        run(transport, watcher)
+        run(transport, watcher, cli_watcher)
     except KeyboardInterrupt:
         _shutdown(signal.SIGINT, None)
 

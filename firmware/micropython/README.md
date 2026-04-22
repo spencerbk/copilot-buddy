@@ -1,16 +1,18 @@
 # copilot-buddy — MicroPython Port
 
-Minimal port of the CircuitPython copilot-buddy firmware to **MicroPython** for ESP32-S3 boards.
+Minimal port of the CircuitPython copilot-buddy firmware to **MicroPython** for ESP32-S2 and ESP32-S3 boards.
 
 ## Prerequisites
 
-- ESP32-S3 board with a supported display (ST7789, ILI9341, or SSD1306)
-- MicroPython firmware for ESP32-S3 ([download](https://micropython.org/download/ESP32_GENERIC_S3/))
+- ESP32-S2 or ESP32-S3 board with a supported display (ST7789, ILI9341, or SSD1306)
+- MicroPython firmware for your chip variant:
+  - [ESP32-S3](https://micropython.org/download/ESP32_GENERIC_S3/)
+  - [ESP32-S2](https://micropython.org/download/ESP32_GENERIC_S2/)
 
 ## Flash MicroPython
 
 ```bash
-# Erase flash (one-time)
+# Erase flash (one-time) — use esp32s2 or esp32s3 to match your chip
 esptool.py --chip esp32s3 erase_flash
 
 # Flash MicroPython firmware
@@ -63,6 +65,12 @@ Edit `config.py` and uncomment the line matching your hardware:
 # ACTIVE_BOARD = BOARD_DEVKIT_SSD1306
 ACTIVE_BOARD = BOARD_DEVKIT_ST7789         # ← default
 # ACTIVE_BOARD = BOARD_DEVKIT_ILI9341
+# ACTIVE_BOARD = BOARD_QTPY_S2_SSD1306
+# ACTIVE_BOARD = BOARD_QTPY_S2_ST7789
+# ACTIVE_BOARD = BOARD_QTPY_S2_ILI9341
+# ACTIVE_BOARD = BOARD_QTPY_S3_SSD1306
+# ACTIVE_BOARD = BOARD_QTPY_S3_ST7789
+# ACTIVE_BOARD = BOARD_QTPY_S3_ILI9341
 ```
 
 Then re-upload: `mpremote cp config.py :`

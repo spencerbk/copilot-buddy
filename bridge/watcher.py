@@ -1,8 +1,13 @@
 """Monitor for GitHub Copilot CLI activity.
 
-Scans the process table for 'gh' processes with 'copilot' in the
-argument list.  Detection is best-effort — short-lived processes may
-be missed between poll intervals.
+Scans the process table for Copilot CLI processes.  Supports both the
+traditional ``gh copilot suggest/explain`` invocation and the standalone
+``copilot`` CLI (e.g. ``copilot --yolo --experimental``).
+
+Detection is best-effort — short-lived processes may be missed between
+poll intervals.  The standalone CLI runs as a long-lived interactive
+session, so the watcher provides **session-level** detection (busy while
+running, idle when closed) rather than per-query granularity.
 """
 
 from __future__ import annotations
@@ -13,21 +18,29 @@ from datetime import date
 
 import psutil
 
-log = logging.getLogger(__name__)
+from bridge.constants import (
+    EVT_END,
+    EVT_MILESTONE,
+    EVT_START,
+    MAX_QUERY_LEN,
+    MILESTONE_INTERVAL,
+    STATE_BUSY,
+    STATE_IDLE,
+)
 
-MAX_QUERY_LEN = 80
-"""Maximum query string length forwarded to the device (RAM-friendly)."""
+log = logging.getLogger(__name__)
 
 # Flags that consume the next argument (e.g. ``-t shell``).
 _FLAGS_WITH_VALUE = frozenset({"-t", "--target"})
 
 
 def extract_query(cmdline: list[str]) -> str:
-    """Pull the user's query text from a ``gh copilot`` command line.
+    """Pull the user's query text from a Copilot CLI command line.
 
     Looks for the first non-flag argument after ``suggest`` or ``explain``,
     skipping flags and their values (e.g. ``-t shell``).
-    Returns an empty string when no query is found.
+    Returns an empty string when no query is found (including for the
+    standalone ``copilot`` CLI which does not use subcommands).
     """
     for i, arg in enumerate(cmdline):
         low = arg.lower()
@@ -49,7 +62,11 @@ def extract_query(cmdline: list[str]) -> str:
 
 
 def scan_processes() -> list[dict]:
-    """Return currently-running ``gh copilot`` processes.
+    """Return currently-running Copilot CLI processes.
+
+    Matches two invocation styles:
+    - ``gh copilot suggest/explain`` — executable name is ``gh``
+    - ``copilot [flags]`` — executable name is ``copilot``
 
     Each entry is ``{"pid": int, "mode": str, "query": str}``.
     Handles Windows quirks: *cmdline* can be ``None`` and system
@@ -62,13 +79,16 @@ def scan_processes() -> list[dict]:
             if not cmdline:
                 continue
 
-            # Fast pre-check: the executable name should contain 'gh'.
             name: str = (proc.info.get("name") or "").lower()  # type: ignore[attr-defined]
+            basename = name.removesuffix(".exe")
             joined = " ".join(cmdline).lower()
 
-            if "gh" not in name and "gh" not in joined:
-                continue
-            if "copilot" not in joined:
+            # Traditional: `gh copilot suggest/explain`
+            is_gh_copilot = basename == "gh" and "copilot" in joined
+            # Standalone: `copilot --yolo --experimental`
+            is_standalone_copilot = basename == "copilot"
+
+            if not is_gh_copilot and not is_standalone_copilot:
                 continue
 
             mode = "explain" if "explain" in joined else "suggest"
@@ -90,7 +110,7 @@ class CopilotWatcher:
         self.poll_interval: float = poll_interval
 
         self.active_pids: dict[int, dict] = {}  # pid -> process info
-        self.state: str = "idle"
+        self.state: str = STATE_IDLE
 
         self.queries_today: int = 0
         self.total_queries: int = 0
@@ -117,7 +137,7 @@ class CopilotWatcher:
             if pid not in self.active_pids:
                 self._start_times[pid] = time.monotonic()
                 events.append(
-                    {"evt": "start", "query": info["query"], "mode": info["mode"]}
+                    {"evt": EVT_START, "query": info["query"], "mode": info["mode"]}
                 )
                 log.info(
                     "Copilot %s started (pid %d): %s",
@@ -130,7 +150,7 @@ class CopilotWatcher:
         ended_pids = set(self.active_pids) - current_pids
         for pid in ended_pids:
             duration = time.monotonic() - self._start_times.pop(pid, time.monotonic())
-            events.append({"evt": "end", "preview": ""})
+            events.append({"evt": EVT_END, "preview": ""})
 
             self.queries_today += 1
             self.total_queries += 1
@@ -141,13 +161,13 @@ class CopilotWatcher:
                 log.debug("Fast query (<3s) — heart state eligible")
 
             # Milestone every 50 queries.
-            if self.queries_today > 0 and self.queries_today % 50 == 0:
-                events.append({"evt": "milestone", "n": self.queries_today})
+            if self.queries_today > 0 and self.queries_today % MILESTONE_INTERVAL == 0:
+                events.append({"evt": EVT_MILESTONE, "n": self.queries_today})
                 log.info("Milestone reached: %d queries today", self.queries_today)
 
         # --- Update bookkeeping ------------------------------------
         self.active_pids = current_map
-        self.state = "busy" if current_pids else "idle"
+        self.state = STATE_BUSY if current_pids else STATE_IDLE
         return events
 
     # ------------------------------------------------------------------

@@ -28,7 +28,7 @@ def _init_spi_display(config, driver_cls):
     """Create an SPI-attached TFT display using *driver_cls*."""
     spi = busio.SPI(clock=config["sck"], MOSI=config["mosi"])
 
-    # CircuitPython 9.x: FourWire lives in its own top-level module
+    # FourWire lives in its own top-level module (since CircuitPython 9.x)
     import fourwire  # noqa: E402
 
     bus = fourwire.FourWire(
@@ -72,7 +72,7 @@ def _init_ssd1306(config):
     except ImportError:
         raise RuntimeError("adafruit_ssd1306 lib missing")
 
-    # CircuitPython 9.x: I2CDisplayBus is a top-level module
+    # I2CDisplayBus lives in its own top-level module (since CircuitPython 9.x)
     import i2cdisplaybus
 
     i2c = busio.I2C(scl=config["scl"], sda=config["sda"])

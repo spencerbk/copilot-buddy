@@ -13,7 +13,7 @@ import usb_cdc
 from button import Button
 from config import ACTIVE_BOARD
 from display_driver import init_display, is_color_display, set_backlight
-from pet_renderer import PetAnimator, create_pet_group, render_stats_screen
+from pet_renderer import PetAnimator, create_pet_group, render_hud, render_stats_screen
 from serial_bridge import SerialBridge
 from state_manager import (
     STATE_BUSY,
@@ -22,6 +22,7 @@ from state_manager import (
     StateManager,
 )
 from stats import Stats
+from touch_input import TouchInput
 
 # ── Pet roster ──────────────────────────────────────────────────
 PET_NAMES = ["octocat", "crab", "fox", "owl", "robot", "ghost"]
@@ -130,13 +131,18 @@ def main():
     animator = PetAnimator(group, pet, fps=2)
     animator.set_state(sm.state)
 
-    # ── Button, stats, screen power ─────────────────────────
+    # ── Button, touch, stats, screen power ─────────────────────
     btn = Button(ACTIVE_BOARD)
+    touch = TouchInput(ACTIVE_BOARD)
     stats = Stats()
     stats_mode = False
     screen_on = True
     last_active_time = time.monotonic()
     bridge_ts = None  # latest unix timestamp from heartbeat
+
+    # HUD scroll state
+    hud_scroll = 0
+    prev_entries_len = 0
 
     prev_state = sm.state
     demo_idx = 0
@@ -173,8 +179,8 @@ def main():
         # 3. Tick state manager (timed expiry, disconnect check)
         cur = sm.update(now)
 
-        # 4. Button handling
-        btn_event = btn.update(now)
+        # 4. Button / touch handling
+        btn_event = btn.update(now) or touch.update(now)
         if btn_event is not None:
             # Any button press wakes the screen
             if not screen_on:
@@ -185,7 +191,20 @@ def main():
             elif stats_mode:
                 # Any press in stats mode returns to pet mode
                 stats_mode = False
+                hud_scroll = 0
             elif btn_event == "short_press":
+                # Scroll HUD transcript
+                if sm.entries:
+                    hud_scroll += 1
+                    max_scroll = max(0, len(sm.entries) - 5)
+                    if hud_scroll > max_scroll:
+                        # Past end of entries → show stats
+                        stats_mode = True
+                        hud_scroll = 0
+                else:
+                    # No entries — short press shows stats
+                    stats_mode = not stats_mode
+            elif btn_event == "long_press":
                 # Cycle to next pet
                 pet_index = (pet_index + 1) % len(PET_NAMES)
                 new_pet = _load_pet_by_name(PET_NAMES[pet_index])
@@ -198,8 +217,6 @@ def main():
                     gc.collect()
                 else:
                     print("WARN: pet load failed, keeping current")
-            elif btn_event == "long_press":
-                stats_mode = True
 
         # 5. Push state changes to animator
         if cur != prev_state:
@@ -216,7 +233,13 @@ def main():
             set_backlight(ACTIVE_BOARD, False)
             screen_on = False
 
-        # 7. Render: stats screen or pet animation
+        # 7. Reset scroll when new entries arrive
+        cur_entries_len = len(sm.entries)
+        if cur_entries_len != prev_entries_len:
+            hud_scroll = 0
+            prev_entries_len = cur_entries_len
+
+        # 8. Render: stats screen or pet animation + HUD
         if stats_mode:
             gc.collect()
             render_stats_screen(
@@ -229,21 +252,16 @@ def main():
                 color_display,
             )
         else:
-            # Build status text
-            if sm.state == STATE_BUSY and sm.query:
-                status = sm.query[:20]
-            elif sm.disconnected:
-                status = "~ disconnected ~"
-            else:
-                status = "q:{}".format(stats.queries_today) if stats.queries_today else ""
+            # Advance pet animation frame
+            animator.update(now)
 
-            # Advance animation frame
-            animator.update(now, status_text=status)
+            # Render HUD transcript
+            render_hud(group, sm.entries, sm.msg, hud_scroll)
 
-        # 8. Periodic stats save
+        # 9. Periodic stats save
         stats.save()
 
-        # 9. Periodic GC to reclaim memory
+        # 10. Periodic GC to reclaim memory
         if now - gc_last >= gc_interval:
             gc.collect()
             gc_last = now
